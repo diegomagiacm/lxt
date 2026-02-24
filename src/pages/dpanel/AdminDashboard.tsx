@@ -24,6 +24,8 @@ const AdminDashboard: React.FC = () => {
   const [newUser, setNewUser] = useState({ username: '', code: '', role: 'seller' as 'seller' | 'admin' });
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
+  const LOCATIONS = ['Z', 'R1', 'R2', 'R3', 'R4', 'W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7'];
+
   useEffect(() => {
     const storedUser = localStorage.getItem('dpanel_user');
     if (storedUser) setCurrentUser(JSON.parse(storedUser));
@@ -208,10 +210,128 @@ const AdminDashboard: React.FC = () => {
               }}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              <Plus className="w-4 h-4 mr-2" /> Nuevo Producto
+              <Plus className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">Nuevo Producto</span><span className="sm:hidden">Nuevo</span>
             </button>
           </div>
-          <div className="overflow-x-auto">
+          
+          {/* Mobile View (Cards) */}
+          <div className="md:hidden p-4 space-y-4">
+            {products.map(product => {
+              const isEdited = !!inlineEdits[product.id];
+              const p = inlineEdits[product.id] || product;
+              
+              return (
+                <div key={product.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <div className="flex gap-4 mb-4">
+                    <div className="relative w-24 h-24 shrink-0 group">
+                      <img src={p.image || 'https://via.placeholder.com/40'} alt="" className="w-full h-full object-cover rounded-lg" />
+                      <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer rounded-lg transition-opacity">
+                        <Upload className="w-6 h-6 text-white" />
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          accept="image/*"
+                          onChange={(e) => {
+                            if (e.target.files?.[0]) handleInlineImageUpload(product.id, e.target.files[0]);
+                          }}
+                        />
+                      </label>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <input 
+                        type="text" 
+                        value={p.name}
+                        onChange={(e) => handleInlineChange(product.id, 'name', e.target.value)}
+                        className="w-full border-gray-200 rounded text-sm font-medium focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Nombre"
+                      />
+                      <input 
+                        type="text" 
+                        value={p.category}
+                        onChange={(e) => handleInlineChange(product.id, 'category', e.target.value)}
+                        className="w-full border-gray-200 rounded text-xs text-gray-500 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Categoría"
+                      />
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-400 text-sm">$</span>
+                        <input 
+                          type="number" 
+                          value={p.price}
+                          onChange={(e) => handleInlineChange(product.id, 'price', Number(e.target.value))}
+                          className="w-24 border-gray-200 rounded text-sm font-bold text-blue-600 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <select 
+                          value={p.location || ''}
+                          onChange={(e) => handleInlineChange(product.id, 'location', e.target.value)}
+                          className="flex-1 border-gray-200 rounded text-sm focus:ring-blue-500 focus:border-blue-500 p-1"
+                        >
+                          <option value="">Ubicación</option>
+                          {LOCATIONS.map(loc => (
+                            <option key={loc} value={loc}>{loc}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mb-4 bg-gray-50 p-3 rounded-lg">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Variantes</label>
+                    {(p.variants || []).map((variant, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <input 
+                          type="text" 
+                          value={variant.color}
+                          onChange={(e) => handleVariantChange(product.id, idx, 'color', e.target.value)}
+                          className="flex-1 border-gray-200 rounded text-xs p-1.5"
+                          placeholder="Color"
+                        />
+                        <input 
+                          type="number" 
+                          value={variant.stock}
+                          onChange={(e) => handleVariantChange(product.id, idx, 'stock', e.target.value)}
+                          className="w-16 border-gray-200 rounded text-xs p-1.5"
+                          placeholder="Qty"
+                        />
+                        <button 
+                          onClick={() => removeVariant(product.id, idx)}
+                          className="text-red-400 hover:text-red-600 p-1"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                    <button 
+                      onClick={() => addVariant(product.id)}
+                      className="text-xs text-blue-600 hover:text-blue-800 flex items-center font-medium mt-1"
+                    >
+                      <Plus className="w-3 h-3 mr-1" /> Agregar Variante
+                    </button>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                    <button 
+                      onClick={() => handleInlineChange(product.id, 'stock', !p.stock)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium ${p.stock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+                    >
+                      {p.stock ? 'En Stock' : 'Sin Stock'}
+                    </button>
+                    
+                    {isEdited && (
+                      <button 
+                        onClick={() => handleInlineSave(product.id)}
+                        className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 shadow-sm"
+                      >
+                        <Save className="w-4 h-4 mr-2" /> Guardar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop View (Table) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-gray-50 text-gray-500">
                 <tr>
@@ -219,6 +339,7 @@ const AdminDashboard: React.FC = () => {
                   <th className="px-4 py-3">Nombre</th>
                   <th className="px-4 py-3">Categoría</th>
                   <th className="px-4 py-3 w-24">Precio</th>
+                  <th className="px-4 py-3 w-24">Ubicación</th>
                   <th className="px-4 py-3">Variantes (Color/Stock)</th>
                   <th className="px-4 py-3 w-20">Stock Gral</th>
                   <th className="px-4 py-3 w-24">Acciones</th>
@@ -270,6 +391,18 @@ const AdminDashboard: React.FC = () => {
                           onChange={(e) => handleInlineChange(product.id, 'price', Number(e.target.value))}
                           className="w-full border-gray-200 rounded text-sm focus:ring-blue-500 focus:border-blue-500"
                         />
+                      </td>
+                      <td className="px-4 py-3">
+                        <select 
+                          value={p.location || ''}
+                          onChange={(e) => handleInlineChange(product.id, 'location', e.target.value)}
+                          className="w-full border-gray-200 rounded text-sm focus:ring-blue-500 focus:border-blue-500 p-1"
+                        >
+                          <option value="">-</option>
+                          {LOCATIONS.map(loc => (
+                            <option key={loc} value={loc}>{loc}</option>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-4 py-3">
                         <div className="space-y-1">
@@ -433,6 +566,19 @@ const AdminDashboard: React.FC = () => {
                     required
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Ubicación (Depósito)</label>
+                <select 
+                  value={editingProduct.location || ''}
+                  onChange={e => setEditingProduct({...editingProduct, location: e.target.value})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                >
+                  <option value="">Seleccionar Ubicación</option>
+                  {LOCATIONS.map(loc => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Colores (separados por coma)</label>

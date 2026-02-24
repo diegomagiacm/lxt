@@ -46,7 +46,8 @@ create table products (
   image_url text,
   stock boolean default true,
   colors text[],
-  variants jsonb -- Stores array of {color: string, stock: number}
+  variants jsonb, -- Stores array of {color: string, stock: number}
+  location text
 );
 
 -- 3. Tabla de Ventas

@@ -14,6 +14,7 @@ export interface Product {
   stock: boolean; // General availability
   colors?: string[]; // Deprecated, kept for backward compatibility
   variants?: ProductVariant[]; // New field for color-specific stock
+  location?: string; // Warehouse location (Z, R1, etc.)
   // New fields for Used items
   batteryHealth?: string;
   warranty?: string;
