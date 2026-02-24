@@ -6,7 +6,7 @@ import { X, Calendar, DollarSign, Loader2 } from 'lucide-react';
 interface CartModalProps {
   cart: CartItem[];
   onClose: () => void;
-  onRemove: (id: string) => void;
+  onRemove: (index: number) => void;
   onClear: () => void;
 }
 
@@ -178,15 +178,18 @@ TOTAL APROX: ${finalPrice.currency} ${Math.ceil(finalPrice.value).toLocaleString
             <div className="space-y-6">
               {/* Product Summary */}
               <div className="space-y-4">
-                {cart.map(item => (
-                  <div key={item.id} className="flex gap-4 border-b border-gray-100 pb-4">
+                {cart.map((item, index) => (
+                  <div key={`${item.id}-${index}`} className="flex gap-4 border-b border-gray-100 pb-4">
                     <img src={item.image} className="w-16 h-16 object-cover rounded-md border" alt={item.name} />
                     <div className="flex-1">
-                      <h4 className="font-bold text-sm text-gray-800">{item.name}</h4>
+                      <h4 className="font-bold text-sm text-gray-800">
+                        {item.name}
+                        {item.selectedColor && <span className="text-xs text-gray-500 ml-1">({item.selectedColor})</span>}
+                      </h4>
                       <p className="text-blue-600 font-bold text-sm">USD {item.price}</p>
                       <div className="flex justify-between items-center mt-1">
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">x{item.quantity}</span>
-                        <button onClick={() => onRemove(item.id)} className="text-red-500 text-xs hover:underline">Eliminar</button>
+                        <button onClick={() => onRemove(index)} className="text-red-500 text-xs hover:underline">Eliminar</button>
                       </div>
                     </div>
                   </div>

@@ -15,6 +15,8 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
   const [cart, setCart] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+
   useEffect(() => {
     loadData();
   }, []);
@@ -39,18 +41,41 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
 
     await recordSale(sale);
     setCart([]);
+    setSelectedVariants({});
     await loadData(); // Refresh stats
     alert('Venta registrada con éxito');
   };
 
   const addToCart = (product: Product) => {
-    setCart([...cart, product]);
+    // If product has variants, require selection
+    if (product.variants && product.variants.length > 0) {
+      const selectedColor = selectedVariants[product.id];
+      if (!selectedColor) {
+        alert(`Por favor selecciona un color para ${product.name}`);
+        return;
+      }
+      
+      // Check stock for specific variant
+      const variant = product.variants.find(v => v.color === selectedColor);
+      if (variant && variant.stock <= 0) {
+        alert(`No hay stock para ${product.name} en color ${selectedColor}`);
+        return;
+      }
+      
+      setCart([...cart, { ...product, selectedColor }]);
+    } else {
+      setCart([...cart, product]);
+    }
   };
 
   const removeFromCart = (index: number) => {
     const newCart = [...cart];
     newCart.splice(index, 1);
     setCart(newCart);
+  };
+
+  const handleVariantSelect = (productId: string, color: string) => {
+    setSelectedVariants(prev => ({ ...prev, [productId]: color }));
   };
 
   const filteredProducts = products.filter(p => 
@@ -101,12 +126,35 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
                     <td className="px-6 py-3 text-gray-500">{product.category}</td>
                     <td className="px-6 py-3 font-medium">${product.price}</td>
                     <td className="px-6 py-3">
-                      <button 
-                        onClick={() => addToCart(product)}
-                        className="px-3 py-1 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 text-xs font-medium"
-                      >
-                        Agregar
-                      </button>
+                      {product.variants && product.variants.length > 0 ? (
+                        <div className="flex flex-col space-y-2">
+                          <select 
+                            className="text-xs border rounded p-1"
+                            value={selectedVariants[product.id] || ''}
+                            onChange={(e) => handleVariantSelect(product.id, e.target.value)}
+                          >
+                            <option value="">Seleccionar Color</option>
+                            {product.variants.map((v, idx) => (
+                              <option key={idx} value={v.color} disabled={v.stock <= 0}>
+                                {v.color} ({v.stock})
+                              </option>
+                            ))}
+                          </select>
+                          <button 
+                            onClick={() => addToCart(product)}
+                            className="px-3 py-1 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 text-xs font-medium"
+                          >
+                            Agregar
+                          </button>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => addToCart(product)}
+                          className="px-3 py-1 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 text-xs font-medium"
+                        >
+                          Agregar
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -131,7 +179,10 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
               cart.map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <div className="font-medium text-sm">{item.name}</div>
+                    <div className="font-medium text-sm">
+                      {item.name} 
+                      {item.selectedColor && <span className="text-xs text-gray-500 ml-1">({item.selectedColor})</span>}
+                    </div>
                     <div className="text-xs text-gray-500">${item.price}</div>
                   </div>
                   <button 

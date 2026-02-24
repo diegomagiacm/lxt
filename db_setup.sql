@@ -25,7 +25,8 @@ create table products (
   description text,
   image_url text,
   stock boolean default true,
-  colors text[]
+  colors text[],
+  variants jsonb -- Stores array of {color: string, stock: number}
 );
 
 -- Create Table for Sales/Events (Optional for logging)

@@ -1,4 +1,9 @@
 
+export interface ProductVariant {
+  color: string;
+  stock: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -6,8 +11,9 @@ export interface Product {
   category: string;
   description: string;
   image: string;
-  stock: boolean;
-  colors?: string[];
+  stock: boolean; // General availability
+  colors?: string[]; // Deprecated, kept for backward compatibility
+  variants?: ProductVariant[]; // New field for color-specific stock
   // New fields for Used items
   batteryHealth?: string;
   warranty?: string;
@@ -16,6 +22,7 @@ export interface Product {
 
 export interface CartItem extends Product {
   quantity: number;
+  selectedColor?: string; // Track which variant was selected
 }
 
 export interface User {

@@ -5,12 +5,13 @@ import { X, Check, Info } from 'lucide-react';
 interface ProductModalProps {
   product: Product;
   onClose: () => void;
-  onAddToCart: (p: Product) => void;
+  onAddToCart: (p: Product, variant?: string) => void;
 }
 
 const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onAddToCart }) => {
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>(PaymentMethod.CASH_USD);
   const [dolarRate, setDolarRate] = useState<number | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<string>('');
 
   useEffect(() => {
     // Fetch Dolar Blue from external API
@@ -102,6 +103,35 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onAddToCa
                 <option key={method} value={method}>{method}</option>
               ))}
             </select>
+
+            {/* Variant Selector */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-gray-700 mb-2">Seleccionar Color:</label>
+                <div className="flex flex-wrap gap-2">
+                  {product.variants.map((variant, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => variant.stock > 0 && setSelectedVariant(variant.color)}
+                      disabled={variant.stock <= 0}
+                      className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all
+                        ${selectedVariant === variant.color 
+                          ? 'bg-blue-600 text-white border-blue-600' 
+                          : variant.stock > 0 
+                            ? 'bg-white text-gray-700 border-gray-300 hover:border-blue-400' 
+                            : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60'
+                        }
+                      `}
+                    >
+                      {variant.color} {variant.stock <= 0 && '(Sin Stock)'}
+                    </button>
+                  ))}
+                </div>
+                {!selectedVariant && (
+                  <p className="text-xs text-red-500 mt-1">Por favor selecciona un color.</p>
+                )}
+              </div>
+            )}
             
             <div className="bg-blue-50 p-5 rounded-2xl border border-blue-100 shadow-inner">
               <div className="flex justify-between items-end">
@@ -128,8 +158,21 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onAddToCa
 
           <div className="mt-auto">
             <button 
-              onClick={() => { onAddToCart(product); onClose(); }}
-              className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 transform active:scale-95"
+              onClick={() => {
+                if (product.variants && product.variants.length > 0 && !selectedVariant) {
+                  alert("Por favor selecciona un color.");
+                  return;
+                }
+                onAddToCart(product, selectedVariant); 
+                onClose(); 
+              }}
+              disabled={product.variants && product.variants.length > 0 && !selectedVariant}
+              className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 transform transition-all
+                ${product.variants && product.variants.length > 0 && !selectedVariant
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-xl active:scale-95'
+                }
+              `}
             >
               Agregar al Carrito <Check className="w-5 h-5" />
             </button>

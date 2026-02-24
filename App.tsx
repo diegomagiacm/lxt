@@ -190,19 +190,23 @@ const App: React.FC = () => {
     fetchSheetData();
   }, []);
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, selectedColor?: string) => {
     setCart(prev => {
-      const existing = prev.find(p => p.id === product.id);
+      const existing = prev.find(p => p.id === product.id && p.selectedColor === selectedColor);
       if (existing) {
-        return prev.map(p => p.id === product.id ? { ...p, quantity: p.quantity + 1 } : p);
+        return prev.map(p => (p.id === product.id && p.selectedColor === selectedColor) ? { ...p, quantity: p.quantity + 1 } : p);
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { ...product, quantity: 1, selectedColor }];
     });
     setIsCartOpen(true);
   };
 
-  const removeFromCart = (id: string) => {
-    setCart(prev => prev.filter(item => item.id !== id));
+  const removeFromCart = (index: number) => {
+    setCart(prev => {
+      const newCart = [...prev];
+      newCart.splice(index, 1);
+      return newCart;
+    });
   };
   
   const clearCart = () => {

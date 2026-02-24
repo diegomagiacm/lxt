@@ -51,6 +51,55 @@ const AdminDashboard: React.FC = () => {
     });
   };
 
+  const handleVariantChange = (productId: string, variantIndex: number, field: 'color' | 'stock', value: string | number) => {
+    setInlineEdits(prev => {
+      const currentProduct = prev[productId] || products.find(p => p.id === productId);
+      if (!currentProduct) return prev;
+      
+      const newVariants = [...(currentProduct.variants || [])];
+      if (!newVariants[variantIndex]) return prev;
+
+      newVariants[variantIndex] = {
+        ...newVariants[variantIndex],
+        [field]: field === 'stock' ? Number(value) : value
+      };
+
+      return {
+        ...prev,
+        [productId]: { ...currentProduct, variants: newVariants }
+      };
+    });
+  };
+
+  const addVariant = (productId: string) => {
+    setInlineEdits(prev => {
+      const currentProduct = prev[productId] || products.find(p => p.id === productId);
+      if (!currentProduct) return prev;
+      
+      const newVariants = [...(currentProduct.variants || []), { color: 'Nuevo', stock: 0 }];
+      
+      return {
+        ...prev,
+        [productId]: { ...currentProduct, variants: newVariants }
+      };
+    });
+  };
+
+  const removeVariant = (productId: string, variantIndex: number) => {
+    setInlineEdits(prev => {
+      const currentProduct = prev[productId] || products.find(p => p.id === productId);
+      if (!currentProduct) return prev;
+      
+      const newVariants = [...(currentProduct.variants || [])];
+      newVariants.splice(variantIndex, 1);
+      
+      return {
+        ...prev,
+        [productId]: { ...currentProduct, variants: newVariants }
+      };
+    });
+  };
+
   const handleInlineSave = async (id: string) => {
     const productToSave = inlineEdits[id];
     if (!productToSave) return;
@@ -170,8 +219,8 @@ const AdminDashboard: React.FC = () => {
                   <th className="px-4 py-3">Nombre</th>
                   <th className="px-4 py-3">Categoría</th>
                   <th className="px-4 py-3 w-24">Precio</th>
-                  <th className="px-4 py-3">Colores</th>
-                  <th className="px-4 py-3 w-20">Stock</th>
+                  <th className="px-4 py-3">Variantes (Color/Stock)</th>
+                  <th className="px-4 py-3 w-20">Stock Gral</th>
                   <th className="px-4 py-3 w-24">Acciones</th>
                 </tr>
               </thead>
@@ -223,13 +272,38 @@ const AdminDashboard: React.FC = () => {
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <input 
-                          type="text" 
-                          value={p.colors?.join(', ') || ''}
-                          placeholder="Rojo, Azul..."
-                          onChange={(e) => handleInlineChange(product.id, 'colors', e.target.value.split(',').map(c => c.trim()))}
-                          className="w-full border-gray-200 rounded text-sm focus:ring-blue-500 focus:border-blue-500"
-                        />
+                        <div className="space-y-1">
+                          {(p.variants || []).map((variant, idx) => (
+                            <div key={idx} className="flex items-center space-x-1">
+                              <input 
+                                type="text" 
+                                value={variant.color}
+                                onChange={(e) => handleVariantChange(product.id, idx, 'color', e.target.value)}
+                                className="w-20 border-gray-200 rounded text-xs p-1"
+                                placeholder="Color"
+                              />
+                              <input 
+                                type="number" 
+                                value={variant.stock}
+                                onChange={(e) => handleVariantChange(product.id, idx, 'stock', e.target.value)}
+                                className="w-12 border-gray-200 rounded text-xs p-1"
+                                placeholder="Qty"
+                              />
+                              <button 
+                                onClick={() => removeVariant(product.id, idx)}
+                                className="text-red-400 hover:text-red-600"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                          <button 
+                            onClick={() => addVariant(product.id)}
+                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                          >
+                            <Plus className="w-3 h-3 mr-1" /> Agregar
+                          </button>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <button 

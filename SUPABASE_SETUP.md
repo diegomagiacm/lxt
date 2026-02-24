@@ -46,7 +46,7 @@ create table products (
   image_url text,
   stock boolean default true,
   colors text[],
-  created_at timestamp with time zone default now()
+  variants jsonb -- Stores array of {color: string, stock: number}
 );
 
 -- 3. Tabla de Ventas

@@ -40,7 +40,8 @@ export const getProducts = async (): Promise<Product[]> => {
         description: p.description,
         image: p.image_url,
         stock: p.stock,
-        colors: p.colors
+        colors: p.colors,
+        variants: p.variants || []
       }));
     }
     // If DB is empty, return constants but maybe we should seed?
@@ -63,7 +64,8 @@ export const saveProduct = async (product: Product): Promise<boolean> => {
       description: product.description,
       image_url: product.image,
       stock: product.stock,
-      colors: product.colors
+      colors: product.colors,
+      variants: product.variants
     };
 
     if (data) {
