@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { User, Product } from '../../../types';
-import { getProducts, saveProduct, getSales, uploadImage } from '../../services/db';
+import { User, Product, CartItem, PaymentMethod } from '../../../types';
+import { getProducts, saveProduct, getSales, uploadImage, recordSale } from '../../services/db';
 import { getUsers as fetchUsers, createUser, updateUserStats } from '../../services/auth';
-import { Plus, Edit, Save, Trash, Clock, Upload, X, Check } from 'lucide-react';
+import { sendSaleToGoogleScript, calculateFinalPrice, getUsedProducts } from '../../services/googleScript';
+import { Plus, Edit, Save, Trash, Clock, Upload, X, Check, Search, Calendar, DollarSign, Loader2 } from 'lucide-react';
 import DashboardStats from '../../components/DashboardStats';
+import { BRANCHES } from '../../../constants';
 
 const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'products' | 'users'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'users' | 'pos'>('products');
   const [products, setProducts] = useState<Product[]>([]);
+  const [usedProducts, setUsedProducts] = useState<Product[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,21 +27,140 @@ const AdminDashboard: React.FC = () => {
   const [newUser, setNewUser] = useState({ username: '', code: '', role: 'seller' as 'seller' | 'admin' });
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
+  // POS State
+  const [posCart, setPosCart] = useState<CartItem[]>([]);
+  const [posSearch, setPosSearch] = useState('');
+  const [posSelectedVariants, setPosSelectedVariants] = useState<Record<string, string>>({});
+  const [dolarRate, setDolarRate] = useState<number | null>(null);
+  const [isPosSaving, setIsPosSaving] = useState(false);
+  const [posFormData, setPosFormData] = useState({
+    name: '',
+    phone: '',
+    paymentMethod: PaymentMethod.CASH_USD,
+    branch: BRANCHES[0].name,
+    date: '',
+    time: ''
+  });
+
   const LOCATIONS = ['Z', 'R1', 'R2', 'R3', 'R4', 'W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7'];
 
   useEffect(() => {
     const storedUser = localStorage.getItem('dpanel_user');
     if (storedUser) setCurrentUser(JSON.parse(storedUser));
     loadData();
+    fetchDolar();
   }, []);
+
+  const fetchDolar = () => {
+    fetch('https://dolarapi.com/v1/dolares/blue')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.venta) {
+          setDolarRate(data.venta + 10);
+        }
+      })
+      .catch(err => console.error("Error fetching dollar rate", err));
+  };
 
   const loadData = async () => {
     setLoading(true);
-    const [p, u, s] = await Promise.all([getProducts(), fetchUsers(), getSales()]);
+    const [p, u, s, used] = await Promise.all([getProducts(), fetchUsers(), getSales(), getUsedProducts()]);
     setProducts(p);
     setUsers(u);
     setSales(s);
+    setUsedProducts(used);
     setLoading(false);
+  };
+
+  // --- POS Handlers ---
+  const addToPosCart = (product: Product) => {
+    if (product.variants && product.variants.length > 0) {
+      const selectedColor = posSelectedVariants[product.id];
+      if (!selectedColor) {
+        alert(`Por favor selecciona un color para ${product.name}`);
+        return;
+      }
+      const variant = product.variants.find(v => v.color === selectedColor);
+      if (variant && variant.stock <= 0) {
+        alert(`No hay stock para ${product.name} en color ${selectedColor}`);
+        return;
+      }
+      
+      setPosCart(prev => {
+        const existing = prev.find(p => p.id === product.id && p.selectedColor === selectedColor);
+        if (existing) {
+          return prev.map(p => (p.id === product.id && p.selectedColor === selectedColor) ? { ...p, quantity: p.quantity + 1 } : p);
+        }
+        return [...prev, { ...product, quantity: 1, selectedColor }];
+      });
+    } else {
+      setPosCart(prev => {
+        const existing = prev.find(p => p.id === product.id);
+        if (existing) {
+          return prev.map(p => p.id === product.id ? { ...p, quantity: p.quantity + 1 } : p);
+        }
+        return [...prev, { ...product, quantity: 1 }];
+      });
+    }
+  };
+
+  const removeFromPosCart = (index: number) => {
+    setPosCart(prev => {
+      const newCart = [...prev];
+      newCart.splice(index, 1);
+      return newCart;
+    });
+  };
+
+  const handlePosVariantSelect = (productId: string, color: string) => {
+    setPosSelectedVariants(prev => ({ ...prev, [productId]: color }));
+  };
+
+  const handlePosSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (posCart.length === 0) return;
+
+    setIsPosSaving(true);
+    try {
+      const totalUsd = posCart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+      const finalPrice = calculateFinalPrice(totalUsd, posFormData.paymentMethod, dolarRate || 1200);
+
+      // 1. Send to Google Script (Calendar & Sheets)
+      await sendSaleToGoogleScript({
+        ...posFormData,
+        cart: posCart,
+        totalUsd,
+        dolarRate: dolarRate || 1200,
+        finalPrice
+      });
+
+      // 2. Record in Supabase Sales
+      await recordSale({
+        userId: currentUser?.username || 'admin',
+        products: posCart,
+        total: totalUsd,
+        date: new Date().toISOString()
+      });
+
+      alert("Venta registrada y agendada con éxito.");
+      setPosCart([]);
+      setPosFormData({
+        name: '',
+        phone: '',
+        paymentMethod: PaymentMethod.CASH_USD,
+        branch: BRANCHES[0].name,
+        date: '',
+        time: ''
+      });
+      setPosSelectedVariants({});
+      loadData(); // Refresh sales stats
+
+    } catch (error) {
+      console.error(error);
+      alert("Error al registrar la venta.");
+    } finally {
+      setIsPosSaving(false);
+    }
   };
 
   // --- Inline Editing Handlers ---
@@ -169,26 +291,220 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const allPosProducts = [...products, ...usedProducts];
+  const filteredPosProducts = allPosProducts.filter(p => 
+    p.name.toLowerCase().includes(posSearch.toLowerCase()) ||
+    p.category.toLowerCase().includes(posSearch.toLowerCase())
+  );
+
   if (loading) return <div className="p-8 text-center">Cargando...</div>;
 
   return (
     <div className="space-y-6">
       {currentUser && <DashboardStats user={currentUser} sales={sales} allUsers={users} />}
 
-      <div className="flex space-x-4 border-b border-gray-200 pb-2">
+      <div className="flex space-x-4 border-b border-gray-200 pb-2 overflow-x-auto">
         <button 
-          className={`px-4 py-2 font-medium rounded-lg ${activeTab === 'products' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
+          className={`px-4 py-2 font-medium rounded-lg whitespace-nowrap ${activeTab === 'products' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
           onClick={() => setActiveTab('products')}
         >
           Gestionar Productos
         </button>
         <button 
-          className={`px-4 py-2 font-medium rounded-lg ${activeTab === 'users' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
+          className={`px-4 py-2 font-medium rounded-lg whitespace-nowrap ${activeTab === 'users' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
           onClick={() => setActiveTab('users')}
         >
           Gestionar Usuarios
         </button>
+        <button 
+          className={`px-4 py-2 font-medium rounded-lg whitespace-nowrap ${activeTab === 'pos' ? 'bg-green-100 text-green-700' : 'text-gray-500 hover:bg-gray-50'}`}
+          onClick={() => setActiveTab('pos')}
+        >
+          Registrar Venta (POS)
+        </button>
       </div>
+
+      {activeTab === 'pos' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* POS Product List */}
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[600px]">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center shrink-0">
+              <h3 className="font-semibold text-lg">Seleccionar Productos</h3>
+              <div className="relative w-40 md:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input 
+                  type="text" 
+                  placeholder="Buscar..." 
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={posSearch}
+                  onChange={e => setPosSearch(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+               <div className="space-y-4">
+                {filteredPosProducts.map(product => (
+                  <div key={product.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                    <img src={product.image || 'https://via.placeholder.com/60'} alt="" className="w-16 h-16 object-cover rounded-md" />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900">{product.name}</h4>
+                      <div className="flex gap-2 mt-1">
+                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{product.category}</span>
+                         {product.location && <span className="text-xs text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">{product.location}</span>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
+                      <span className="font-bold text-blue-600 text-lg">${product.price}</span>
+                      
+                      {product.variants && product.variants.length > 0 ? (
+                        <div className="flex flex-col gap-2 w-full sm:w-auto">
+                          <select 
+                            className="text-xs border rounded p-1.5 w-full"
+                            value={posSelectedVariants[product.id] || ''}
+                            onChange={(e) => handlePosVariantSelect(product.id, e.target.value)}
+                          >
+                            <option value="">Color</option>
+                            {product.variants.map((v, idx) => (
+                              <option key={idx} value={v.color} disabled={v.stock <= 0}>
+                                {v.color} ({v.stock})
+                              </option>
+                            ))}
+                          </select>
+                          <button 
+                            onClick={() => addToPosCart(product)}
+                            className="px-4 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs font-bold"
+                          >
+                            Agregar
+                          </button>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => addToPosCart(product)}
+                          className="px-4 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs font-bold w-full sm:w-auto"
+                        >
+                          Agregar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* POS Checkout Form */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-[600px]">
+            <div className="p-6 border-b border-gray-100 bg-gray-50">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-green-600" /> Checkout
+              </h3>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Cart Items */}
+              {posCart.length === 0 ? (
+                <p className="text-center text-gray-400 py-4">Carrito vacío</p>
+              ) : (
+                <div className="space-y-2 mb-4">
+                  {posCart.map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-sm p-2 bg-gray-50 rounded border border-gray-100">
+                      <div>
+                        <span className="font-medium">{item.name}</span>
+                        {item.selectedColor && <span className="text-xs text-gray-500 ml-1">({item.selectedColor})</span>}
+                        <div className="text-xs text-gray-400">x{item.quantity} - ${item.price}</div>
+                      </div>
+                      <button onClick={() => removeFromPosCart(idx)} className="text-red-400 hover:text-red-600">&times;</button>
+                    </div>
+                  ))}
+                  <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                    <span>Total USD:</span>
+                    <span>${posCart.reduce((sum, p) => sum + (p.price * p.quantity), 0)}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Form */}
+              <form id="pos-form" onSubmit={handlePosSubmit} className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-600 uppercase">Cliente</label>
+                  <input 
+                    required 
+                    placeholder="Nombre Completo" 
+                    className="w-full p-2 border border-gray-300 rounded text-sm" 
+                    value={posFormData.name}
+                    onChange={e => setPosFormData({...posFormData, name: e.target.value})} 
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-600 uppercase">Teléfono</label>
+                  <input 
+                    required 
+                    placeholder="Contacto" 
+                    className="w-full p-2 border border-gray-300 rounded text-sm" 
+                    value={posFormData.phone}
+                    onChange={e => setPosFormData({...posFormData, phone: e.target.value})} 
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 uppercase">Sucursal</label>
+                    <select 
+                      className="w-full p-2 border border-gray-300 rounded text-sm" 
+                      value={posFormData.branch}
+                      onChange={e => setPosFormData({...posFormData, branch: e.target.value})}
+                    >
+                      {BRANCHES.map(b => <option key={b.name} value={b.name}>{b.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-600 uppercase">Pago</label>
+                    <select 
+                      className="w-full p-2 border border-gray-300 rounded text-sm" 
+                      value={posFormData.paymentMethod}
+                      onChange={e => setPosFormData({...posFormData, paymentMethod: e.target.value as PaymentMethod})}
+                    >
+                      {Object.values(PaymentMethod).map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-600 uppercase">Fecha Retiro</label>
+                  <div className="flex gap-2">
+                    <input 
+                      required 
+                      type="date" 
+                      className="w-full p-2 border border-gray-300 rounded text-sm" 
+                      value={posFormData.date}
+                      onChange={e => setPosFormData({...posFormData, date: e.target.value})} 
+                    />
+                    <input 
+                      required 
+                      type="time" 
+                      className="w-full p-2 border border-gray-300 rounded text-sm" 
+                      value={posFormData.time}
+                      onChange={e => setPosFormData({...posFormData, time: e.target.value})} 
+                    />
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <div className="p-4 border-t border-gray-100 bg-gray-50">
+              <button 
+                type="submit"
+                form="pos-form"
+                disabled={isPosSaving || posCart.length === 0}
+                className={`w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 shadow-md
+                  ${isPosSaving || posCart.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}
+                `}
+              >
+                {isPosSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Calendar className="w-5 h-5" />}
+                {isPosSaving ? 'Procesando...' : 'Confirmar Venta'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'products' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
