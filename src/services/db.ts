@@ -6,6 +6,28 @@ import { PRODUCTS } from '../../constants';
 let MOCK_PRODUCTS = [...PRODUCTS];
 let MOCK_SALES: any[] = [];
 
+export const uploadImage = async (file: File): Promise<string | null> => {
+  if (isSupabaseConfigured() && supabase) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('products')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error('Error uploading image:', uploadError);
+      return null;
+    }
+
+    const { data } = supabase.storage.from('products').getPublicUrl(filePath);
+    return data.publicUrl;
+  }
+  // Mock upload (return a fake URL or base64 if we wanted, but for now just null or original)
+  return URL.createObjectURL(file);
+};
+
 export const getProducts = async (): Promise<Product[]> => {
   if (isSupabaseConfigured() && supabase) {
     const { data, error } = await supabase.from('products').select('*');

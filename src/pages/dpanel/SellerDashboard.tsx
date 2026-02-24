@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { User, Product } from '../../../types';
-import { getProducts, getSales, recordSale, calculateDailyCommissions } from '../../services/db';
-import { Package, DollarSign, TrendingUp, ShoppingCart, Search } from 'lucide-react';
+import { getProducts, getSales, recordSale } from '../../services/db';
+import { Package, Search } from 'lucide-react';
+import DashboardStats from '../../components/DashboardStats';
 
 interface SellerDashboardProps {
   user: User;
@@ -57,73 +58,12 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
     p.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const { totalCommission, breakdown } = calculateDailyCommissions(sales);
-  
-  // Calculate today's sales count
-  const today = new Date().toISOString().split('T')[0];
-  const todaySales = sales.filter(s => (s.created_at || s.date).startsWith(today)).length;
-
-  // Calculate total earnings (Commissions + Extra Hours)
-  const extraHoursPay = (user.extraHours || 0) * 5;
-  const totalEarnings = totalCommission + extraHoursPay;
-
   if (loading) return <div className="p-8 text-center">Cargando...</div>;
 
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Ventas Hoy</p>
-              <h3 className="text-2xl font-bold text-gray-800">{todaySales}</h3>
-            </div>
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <ShoppingCart className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <div className="mt-2 text-xs text-gray-400">
-            Meta prox nivel: {todaySales < 20 ? 20 : (todaySales < 30 ? 30 : 'Max')}
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Comisiones (Bonos)</p>
-              <h3 className="text-2xl font-bold text-green-600">${totalCommission}</h3>
-            </div>
-            <div className="p-3 bg-green-50 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Horas Extra ({user.extraHours || 0}h)</p>
-              <h3 className="text-2xl font-bold text-purple-600">${extraHoursPay}</h3>
-            </div>
-            <div className="p-3 bg-purple-50 rounded-lg">
-              <DollarSign className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total a Cobrar</p>
-              <h3 className="text-2xl font-bold text-gray-800">${totalEarnings}</h3>
-            </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <DollarSign className="w-6 h-6 text-gray-600" />
-            </div>
-          </div>
-        </div>
-      </div>
+      <DashboardStats user={user} sales={sales} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Product List */}

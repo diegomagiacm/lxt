@@ -1,36 +1,86 @@
 import React, { useState, useEffect } from 'react';
 import { User, Product } from '../../../types';
-import { getProducts, saveProduct } from '../../services/db';
+import { getProducts, saveProduct, getSales, uploadImage } from '../../services/db';
 import { getUsers as fetchUsers, createUser, updateUserStats } from '../../services/auth';
-import { Plus, Edit, Save, Trash, Clock } from 'lucide-react';
+import { Plus, Edit, Save, Trash, Clock, Upload, X, Check } from 'lucide-react';
+import DashboardStats from '../../components/DashboardStats';
 
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'products' | 'users'>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // Product Form State
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null); // For modal (new product)
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  
+  // Inline Editing State
+  const [inlineEdits, setInlineEdits] = useState<Record<string, Product>>({});
 
   // User Form State
   const [newUser, setNewUser] = useState({ username: '', code: '', role: 'seller' as 'seller' | 'admin' });
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
   useEffect(() => {
+    const storedUser = localStorage.getItem('dpanel_user');
+    if (storedUser) setCurrentUser(JSON.parse(storedUser));
     loadData();
   }, []);
 
   const loadData = async () => {
     setLoading(true);
-    const [p, u] = await Promise.all([getProducts(), fetchUsers()]);
+    const [p, u, s] = await Promise.all([getProducts(), fetchUsers(), getSales()]);
     setProducts(p);
     setUsers(u);
+    setSales(s);
     setLoading(false);
   };
 
-  const handleSaveProduct = async (e: React.FormEvent) => {
+  // --- Inline Editing Handlers ---
+  const handleInlineChange = (id: string, field: keyof Product, value: any) => {
+    setInlineEdits(prev => {
+      const currentProduct = prev[id] || products.find(p => p.id === id);
+      if (!currentProduct) return prev;
+      return {
+        ...prev,
+        [id]: { ...currentProduct, [field]: value }
+      };
+    });
+  };
+
+  const handleInlineSave = async (id: string) => {
+    const productToSave = inlineEdits[id];
+    if (!productToSave) return;
+
+    const success = await saveProduct(productToSave);
+    if (success) {
+      setProducts(prev => prev.map(p => p.id === id ? productToSave : p));
+      setInlineEdits(prev => {
+        const newState = { ...prev };
+        delete newState[id];
+        return newState;
+      });
+    } else {
+      alert('Error al guardar');
+    }
+  };
+
+  const handleInlineImageUpload = async (id: string, file: File) => {
+    const url = await uploadImage(file);
+    if (url) {
+      handleInlineChange(id, 'image', url);
+      // Auto-save image update? Or let user click save?
+      // Let's let user click save to confirm, but update preview
+    } else {
+      alert('Error al subir imagen');
+    }
+  };
+
+  // --- Modal Handlers (New Product) ---
+  const handleSaveNewProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
     
@@ -38,6 +88,14 @@ const AdminDashboard: React.FC = () => {
     setIsProductModalOpen(false);
     setEditingProduct(null);
     loadData();
+  };
+
+  const handleNewProductImageUpload = async (file: File) => {
+    if (!editingProduct) return;
+    const url = await uploadImage(file);
+    if (url) {
+      setEditingProduct({ ...editingProduct, image: url });
+    }
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -64,6 +122,8 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {currentUser && <DashboardStats user={currentUser} sales={sales} allUsers={users} />}
+
       <div className="flex space-x-4 border-b border-gray-200 pb-2">
         <button 
           className={`px-4 py-2 font-medium rounded-lg ${activeTab === 'products' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
@@ -106,37 +166,93 @@ const AdminDashboard: React.FC = () => {
             <table className="w-full text-left text-sm">
               <thead className="bg-gray-50 text-gray-500">
                 <tr>
-                  <th className="px-6 py-3">Nombre</th>
-                  <th className="px-6 py-3">Categoría</th>
-                  <th className="px-6 py-3">Precio</th>
-                  <th className="px-6 py-3">Stock</th>
-                  <th className="px-6 py-3">Acciones</th>
+                  <th className="px-4 py-3 w-16">Img</th>
+                  <th className="px-4 py-3">Nombre</th>
+                  <th className="px-4 py-3">Categoría</th>
+                  <th className="px-4 py-3 w-24">Precio</th>
+                  <th className="px-4 py-3">Colores</th>
+                  <th className="px-4 py-3 w-20">Stock</th>
+                  <th className="px-4 py-3 w-24">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {products.map(product => (
-                  <tr key={product.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-3 font-medium">{product.name}</td>
-                    <td className="px-6 py-3 text-gray-500">{product.category}</td>
-                    <td className="px-6 py-3">${product.price}</td>
-                    <td className="px-6 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs ${product.stock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {product.stock ? 'Si' : 'No'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3">
-                      <button 
-                        onClick={() => {
-                          setEditingProduct(product);
-                          setIsProductModalOpen(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-800 mr-3"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {products.map(product => {
+                  const isEdited = !!inlineEdits[product.id];
+                  const p = inlineEdits[product.id] || product;
+
+                  return (
+                    <tr key={product.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="relative w-10 h-10 group">
+                          <img src={p.image || 'https://via.placeholder.com/40'} alt="" className="w-full h-full object-cover rounded" />
+                          <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer rounded transition-opacity">
+                            <Upload className="w-4 h-4 text-white" />
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              accept="image/*"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) handleInlineImageUpload(product.id, e.target.files[0]);
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <input 
+                          type="text" 
+                          value={p.name}
+                          onChange={(e) => handleInlineChange(product.id, 'name', e.target.value)}
+                          className="w-full border-gray-200 rounded text-sm focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input 
+                          type="text" 
+                          value={p.category}
+                          onChange={(e) => handleInlineChange(product.id, 'category', e.target.value)}
+                          className="w-full border-gray-200 rounded text-sm focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input 
+                          type="number" 
+                          value={p.price}
+                          onChange={(e) => handleInlineChange(product.id, 'price', Number(e.target.value))}
+                          className="w-full border-gray-200 rounded text-sm focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input 
+                          type="text" 
+                          value={p.colors?.join(', ') || ''}
+                          placeholder="Rojo, Azul..."
+                          onChange={(e) => handleInlineChange(product.id, 'colors', e.target.value.split(',').map(c => c.trim()))}
+                          className="w-full border-gray-200 rounded text-sm focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <button 
+                          onClick={() => handleInlineChange(product.id, 'stock', !p.stock)}
+                          className={`px-2 py-1 rounded-full text-xs font-medium w-full ${p.stock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+                        >
+                          {p.stock ? 'Si' : 'No'}
+                        </button>
+                      </td>
+                      <td className="px-4 py-3">
+                        {isEdited && (
+                          <button 
+                            onClick={() => handleInlineSave(product.id)}
+                            className="text-green-600 hover:text-green-800 p-1 bg-green-50 rounded mr-2"
+                            title="Guardar cambios"
+                          >
+                            <Save className="w-4 h-4" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -190,12 +306,28 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Product Modal */}
+      {/* Product Modal (New Product Only) */}
       {isProductModalOpen && editingProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg">
-            <h3 className="text-xl font-bold mb-4">{editingProduct.id.startsWith('new') ? 'Crear Producto' : 'Editar Producto'}</h3>
-            <form onSubmit={handleSaveProduct} className="space-y-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-4">Crear Producto</h3>
+            <form onSubmit={handleSaveNewProduct} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Imagen</label>
+                <div className="mt-1 flex items-center space-x-4">
+                  {editingProduct.image && (
+                    <img src={editingProduct.image} alt="Preview" className="w-16 h-16 object-cover rounded" />
+                  )}
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) handleNewProductImageUpload(e.target.files[0]);
+                    }}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Nombre</label>
                 <input 
@@ -227,6 +359,16 @@ const AdminDashboard: React.FC = () => {
                     required
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Colores (separados por coma)</label>
+                <input 
+                  type="text" 
+                  value={editingProduct.colors?.join(', ') || ''}
+                  onChange={e => setEditingProduct({...editingProduct, colors: e.target.value.split(',').map(c => c.trim())})}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                  placeholder="Negro, Blanco, Azul"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Descripción</label>
