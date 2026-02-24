@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import ProductList from './components/ProductList';
@@ -212,7 +212,7 @@ const App: React.FC = () => {
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Layout cartCount={totalItems} openCart={() => setIsCartOpen(true)}>
         <Routes>
           <Route path="/" element={
@@ -243,7 +243,7 @@ const App: React.FC = () => {
           />
         )}
       </Layout>
-    </BrowserRouter>
+    </HashRouter>
   );
 };
 
