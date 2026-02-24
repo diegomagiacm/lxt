@@ -10,6 +10,8 @@ import Footer from './components/Footer';
 import { Product, CartItem } from './types';
 import { PRODUCTS, fallbackImg, USED_PRODUCTS_SHEET_ID } from './constants';
 
+import DashboardLayout from './src/pages/dpanel';
+
 // Wrapper to conditionally render layout
 const Layout: React.FC<{ children: React.ReactNode; cartCount: number; openCart: () => void }> = ({ children, cartCount, openCart }) => {
   const location = useLocation();
@@ -221,7 +223,7 @@ const App: React.FC = () => {
               </div>
             </main>
           } />
-          <Route path="/dpanel" element={<AdminPanel />} />
+          <Route path="/dpanel/*" element={<DashboardLayout />} />
         </Routes>
 
         {isCartOpen && (

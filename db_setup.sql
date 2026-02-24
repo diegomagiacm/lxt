@@ -12,7 +12,9 @@ create table users (
 insert into users (username, code, role) values
 ('aracelit', 'A955118', 'admin'),
 ('diegou', 'D1455', 'admin'),
-('joacor', 'J955602', 'seller');
+('joacor', '955118', 'admin'),
+('gastonv', '955602', 'admin'),
+('ignaciop', '605955', 'admin');
 
 -- Create Table for Products
 create table products (

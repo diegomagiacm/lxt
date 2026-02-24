@@ -29,7 +29,9 @@ export const BRANCHES: Branch[] = [
 export const INITIAL_USERS: User[] = [
   { username: 'aracelit', code: 'A955118', role: 'admin', salesCount: 0, extraHours: 0 },
   { username: 'diegou', code: 'D1455', role: 'admin', salesCount: 0, extraHours: 0 },
-  { username: 'joacor', code: 'J955602', role: 'seller', salesCount: 0, extraHours: 0 },
+  { username: 'joacor', code: '955118', role: 'admin', salesCount: 0, extraHours: 0 },
+  { username: 'gastonv', code: '955602', role: 'admin', salesCount: 0, extraHours: 0 },
+  { username: 'ignaciop', code: '605955', role: 'admin', salesCount: 0, extraHours: 0 },
 ];
 
 // Helper to construct image URL
