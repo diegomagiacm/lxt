@@ -33,7 +33,8 @@ const Hero: React.FC<HeroProps> = ({ products }) => {
 
   useEffect(() => {
     if (products.length > 0) {
-      const shuffled = shuffleArray(products).slice(0, 5);
+      const productsWithImages = products.filter(p => p.image && p.image.trim() !== '');
+      const shuffled = shuffleArray(productsWithImages).slice(0, 5);
       const items = shuffled.map((p, index) => {
          // Pick a random gradient, but try to keep it consistent for the same index if we wanted, 
          // but here we just pick random.
