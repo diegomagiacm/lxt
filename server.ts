@@ -66,39 +66,21 @@ app.put('/api/products/:id', (req, res) => {
     const { id } = req.params;
     const updatedProduct = req.body;
     
-    console.log(`Received update for product ID: ${id}`);
-    console.log('Updated product data:', JSON.stringify(updatedProduct, null, 2));
-
     let products = [];
     if (fs.existsSync(DATA_FILE)) {
-      try {
-        const fileContent = fs.readFileSync(DATA_FILE, 'utf-8');
-        products = JSON.parse(fileContent);
-        if (!Array.isArray(products)) {
-          console.error('products.json is not an array, resetting to empty array');
-          products = [];
-        }
-      } catch (e) {
-        console.error('Error parsing products.json:', e);
-        products = [];
-      }
+      products = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
     } else {
       products = [...PRODUCTS];
     }
 
     const index = products.findIndex((p: any) => String(p.id) === String(id));
-    
     if (index !== -1) {
-      console.log(`Product found at index ${index}, updating...`);
-      // Ensure ID is preserved if not in body
-      products[index] = { ...products[index], ...updatedProduct, id: id };
+      products[index] = updatedProduct;
     } else {
-      console.log('Product not found, creating new...');
-      products.push({ ...updatedProduct, id: id });
+      products.push(updatedProduct);
     }
 
     fs.writeFileSync(DATA_FILE, JSON.stringify(products, null, 2));
-    console.log('Product saved successfully');
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating product:', error);

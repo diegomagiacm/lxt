@@ -71,7 +71,7 @@ export const getProducts = async (): Promise<Product[]> => {
   
   // Local API (Server-side JSON)
   try {
-    const response = await fetch('/api/products', { cache: 'no-store' });
+    const response = await fetch('/api/products');
     if (response.ok) {
       const data = await response.json();
       return data;
@@ -116,8 +116,7 @@ export const saveProduct = async (product: Product): Promise<boolean> => {
   } else {
     // Local API (Server-side JSON)
     try {
-      console.log('Saving product to API:', product);
-      const response = await fetch(`/api/products/${product.id}?t=${Date.now()}`, {
+      const response = await fetch(`/api/products/${product.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
