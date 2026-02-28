@@ -100,9 +100,17 @@ export const saveProduct = async (product: Product): Promise<boolean> => {
 
     if (data) {
       const { error } = await supabase.from('products').update(payload).eq('id', product.id);
+      if (error) {
+        console.error('Supabase update error:', error);
+        alert(`Error Supabase: ${error.message}`);
+      }
       return !error;
     } else {
       const { error } = await supabase.from('products').insert([{ ...payload, id: product.id }]);
+      if (error) {
+        console.error('Supabase insert error:', error);
+        alert(`Error Supabase: ${error.message}`);
+      }
       return !error;
     }
   } else {
@@ -131,6 +139,10 @@ export const recordSale = async (sale: { userId: string, products: any[], total:
       total_amount: sale.total,
       created_at: sale.date
     }]);
+    if (error) {
+      console.error('Supabase sale error:', error);
+      alert(`Error Supabase: ${error.message}`);
+    }
     return !error;
   } else {
     try {
