@@ -73,7 +73,7 @@ app.put('/api/products/:id', (req, res) => {
       products = [...PRODUCTS];
     }
 
-    const index = products.findIndex((p: any) => p.id === id);
+    const index = products.findIndex((p: any) => String(p.id) === String(id));
     if (index !== -1) {
       products[index] = updatedProduct;
     } else {
@@ -84,7 +84,7 @@ app.put('/api/products/:id', (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error updating product:', error);
-    res.status(500).json({ error: 'Failed to update product' });
+    res.status(500).json({ error: `Failed to update product: ${(error as Error).message}` });
   }
 });
 

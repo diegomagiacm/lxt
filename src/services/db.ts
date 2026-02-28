@@ -123,9 +123,17 @@ export const saveProduct = async (product: Product): Promise<boolean> => {
         },
         body: JSON.stringify(product)
       });
+      
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        console.error('API Error Details:', errData);
+        alert(`Error del servidor: ${errData.error || response.statusText}`);
+      }
+      
       return response.ok;
     } catch (error) {
       console.error('Error saving to API:', error);
+      alert(`Error de conexión: ${error}`);
       return false;
     }
   }
@@ -153,9 +161,17 @@ export const recordSale = async (sale: { userId: string, products: any[], total:
         },
         body: JSON.stringify(sale)
       });
+      
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        console.error('API Error Details:', errData);
+        alert(`Error del servidor: ${errData.error || response.statusText}`);
+      }
+
       return response.ok;
     } catch (error) {
       console.error('Error recording sale to API:', error);
+      alert(`Error de conexión: ${error}`);
       return false;
     }
   }
