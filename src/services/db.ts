@@ -69,8 +69,17 @@ export const getProducts = async (): Promise<Product[]> => {
     return []; 
   }
   
-  // Local Storage
-  return getFromStorage<Product[]>(STORAGE_KEYS.PRODUCTS, [...PRODUCTS]);
+  // Local API (Server-side JSON)
+  try {
+    const response = await fetch('/api/products');
+    if (response.ok) {
+      const data = await response.json();
+      return data;
+    }
+  } catch (error) {
+    console.error('Error fetching from API, falling back to constants:', error);
+  }
+  return [...PRODUCTS];
 };
 
 export const saveProduct = async (product: Product): Promise<boolean> => {
@@ -97,18 +106,20 @@ export const saveProduct = async (product: Product): Promise<boolean> => {
       return !error;
     }
   } else {
-    // Local Storage
-    const products = getFromStorage<Product[]>(STORAGE_KEYS.PRODUCTS, [...PRODUCTS]);
-    const idx = products.findIndex(p => p.id === product.id);
-    
-    if (idx >= 0) {
-      products[idx] = product;
-    } else {
-      products.push(product);
+    // Local API (Server-side JSON)
+    try {
+      const response = await fetch(`/api/products/${product.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(product)
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Error saving to API:', error);
+      return false;
     }
-    
-    saveToStorage(STORAGE_KEYS.PRODUCTS, products);
-    return true;
   }
 };
 
@@ -122,10 +133,19 @@ export const recordSale = async (sale: { userId: string, products: any[], total:
     }]);
     return !error;
   } else {
-    const sales = getFromStorage<any[]>(STORAGE_KEYS.SALES, []);
-    sales.push({ ...sale, id: Math.random().toString() });
-    saveToStorage(STORAGE_KEYS.SALES, sales);
-    return true;
+    try {
+      const response = await fetch('/api/sales', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(sale)
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Error recording sale to API:', error);
+      return false;
+    }
   }
 };
 
@@ -134,7 +154,16 @@ export const getSales = async (): Promise<any[]> => {
     const { data } = await supabase.from('sales').select('*').order('created_at', { ascending: false });
     return data || [];
   }
-  return getFromStorage<any[]>(STORAGE_KEYS.SALES, []);
+  
+  try {
+    const response = await fetch('/api/sales');
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (error) {
+    console.error('Error fetching sales from API:', error);
+  }
+  return [];
 };
 
 export const calculateDailyCommissions = (sales: any[]) => {

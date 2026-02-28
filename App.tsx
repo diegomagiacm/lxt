@@ -66,13 +66,12 @@ const App: React.FC = () => {
 
     loadProducts();
 
-    // Listen for updates from Admin Panel
-    const handleStorageUpdate = () => {
+    // Poll for updates every 10 seconds
+    const interval = setInterval(() => {
       loadProducts();
-    };
+    }, 10000);
     
-    window.addEventListener('local-storage-update', handleStorageUpdate);
-    return () => window.removeEventListener('local-storage-update', handleStorageUpdate);
+    return () => clearInterval(interval);
   }, []);
 
   const addToCart = (product: Product, selectedColor?: string) => {
