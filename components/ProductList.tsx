@@ -24,7 +24,7 @@ const ProductSection: React.FC<ProductSectionProps> = ({ title, products, viewMo
       <div className={`
         ${isListView 
           ? 'flex flex-col gap-2' // Compact gap for list view
-          : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'
+          : 'grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6' // 2 cols mobile, 4 cols desktop
         }
       `}>
         {products.map((product, index) => (

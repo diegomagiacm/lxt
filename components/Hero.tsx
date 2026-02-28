@@ -9,17 +9,17 @@ interface HeroProps {
 
 const Hero: React.FC<HeroProps> = ({ products }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [heroItems, setHeroItems] = useState<(Product & { bg: string; textDark?: boolean })[]>([]);
+  const [heroItems, setHeroItems] = useState<(Product & { bg: string; shadow: string; textDark?: boolean })[]>([]);
 
-  const bgGradients = [
-    'bg-gradient-to-br from-gray-900 to-gray-800',
-    'bg-gradient-to-br from-blue-700 to-blue-900',
-    'bg-gradient-to-br from-orange-500 to-red-600',
-    'bg-gradient-to-br from-gray-200 to-gray-400',
-    'bg-gradient-to-br from-purple-700 to-purple-900',
-    'bg-gradient-to-br from-emerald-600 to-teal-800',
-    'bg-gradient-to-br from-indigo-600 to-blue-800',
-    'bg-gradient-to-br from-rose-600 to-pink-800',
+  const bgConfigs = [
+    { bg: 'bg-gradient-to-br from-gray-900 to-gray-800', shadow: 'shadow-[0_0_15px_rgba(255,255,255,0.5)]' },
+    { bg: 'bg-gradient-to-br from-blue-700 to-blue-900', shadow: 'shadow-[0_0_15px_rgba(59,130,246,0.8)]' },
+    { bg: 'bg-gradient-to-br from-orange-500 to-red-600', shadow: 'shadow-[0_0_15px_rgba(249,115,22,0.8)]' },
+    { bg: 'bg-gradient-to-br from-gray-200 to-gray-400', shadow: 'shadow-[0_0_15px_rgba(156,163,175,0.8)]' },
+    { bg: 'bg-gradient-to-br from-purple-700 to-purple-900', shadow: 'shadow-[0_0_15px_rgba(168,85,247,0.8)]' },
+    { bg: 'bg-gradient-to-br from-emerald-600 to-teal-800', shadow: 'shadow-[0_0_15px_rgba(16,185,129,0.8)]' },
+    { bg: 'bg-gradient-to-br from-indigo-600 to-blue-800', shadow: 'shadow-[0_0_15px_rgba(99,102,241,0.8)]' },
+    { bg: 'bg-gradient-to-br from-rose-600 to-pink-800', shadow: 'shadow-[0_0_15px_rgba(244,63,94,0.8)]' },
   ];
 
   // Helper to shuffle array
@@ -44,11 +44,10 @@ const Hero: React.FC<HeroProps> = ({ products }) => {
       
       const shuffled = shuffleArray(productsWithImages).slice(0, 5);
       const items = shuffled.map((p, index) => {
-         // Pick a random gradient, but try to keep it consistent for the same index if we wanted, 
-         // but here we just pick random.
-         const bg = bgGradients[Math.floor(Math.random() * bgGradients.length)];
-         const isLightBg = bg.includes('gray-200');
-         return { ...p, bg, textDark: isLightBg };
+         // Pick a random gradient config
+         const config = bgConfigs[Math.floor(Math.random() * bgConfigs.length)];
+         const isLightBg = config.bg.includes('gray-200');
+         return { ...p, bg: config.bg, shadow: config.shadow, textDark: isLightBg };
       });
       setHeroItems(items);
     }
@@ -73,40 +72,45 @@ const Hero: React.FC<HeroProps> = ({ products }) => {
       
       <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
 
-      <div className="container mx-auto px-2 md:px-4 grid grid-cols-2 gap-2 md:gap-8 items-center relative z-10">
+      <div className="container mx-auto px-2 md:px-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-8 items-center relative z-10">
         
-        {/* Text Section */}
-        <div className={`flex flex-col items-start text-left space-y-2 md:space-y-6 animate-fade-in-up ${isTextDark ? 'text-gray-900' : 'text-white'}`}>
-          <span className="inline-block px-2 md:px-4 py-0.5 md:py-1 rounded-full border border-current text-[10px] md:text-sm font-bold tracking-widest uppercase opacity-80">
+        {/* Text Section - 1/4 width on desktop */}
+        <div className={`flex flex-col items-start text-left space-y-2 md:space-y-6 animate-fade-in-up md:col-span-1 ${isTextDark ? 'text-gray-900' : 'text-white'}`}>
+          <span className={`inline-block px-3 md:px-5 py-1 md:py-1.5 rounded-full border border-current text-[10px] md:text-sm font-bold tracking-widest uppercase ${currentItem.shadow} backdrop-blur-sm`}>
             Destacado
           </span>
-          <h1 className="text-2xl sm:text-3xl md:text-6xl font-black tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
             {currentItem.name}
           </h1>
-          <p className={`text-xs sm:text-sm md:text-xl max-w-lg opacity-90 font-medium line-clamp-3 md:line-clamp-none`}>
+          <p className={`text-xs sm:text-sm md:text-lg opacity-90 font-medium line-clamp-3 md:line-clamp-none`}>
             {currentItem.description}
           </p>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl sm:text-2xl md:text-5xl font-bold">USD {currentItem.price}</span>
+            <span className="text-xl sm:text-2xl md:text-4xl font-bold">USD {currentItem.price}</span>
           </div>
           
-          <button className={`mt-2 md:mt-4 px-4 py-2 md:px-8 md:py-4 rounded-full font-bold text-xs md:text-lg shadow-lg transform transition hover:scale-105 flex items-center gap-1 md:gap-2 ${isTextDark ? 'bg-gray-900 text-white hover:bg-black' : 'bg-white text-gray-900 hover:bg-gray-100'}`}>
-            <ShoppingBag className="w-3 h-3 md:w-5 md:h-5" />
-            Ver Producto
-          </button>
+          <a 
+            href={`https://wa.me/5491160423000?text=${encodeURIComponent(`Hola! Me interesa reservar el producto: ${currentItem.name}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`mt-2 md:mt-4 px-4 py-2 md:px-6 md:py-3 rounded-full font-bold text-xs md:text-base shadow-lg transform transition hover:scale-105 flex items-center gap-1 md:gap-2 whitespace-nowrap ${isTextDark ? 'bg-gray-900 text-white hover:bg-black' : 'bg-white text-gray-900 hover:bg-gray-100'}`}
+          >
+            <ShoppingBag className="w-3 h-3 md:w-4 md:h-4" />
+            Reservar Ahora!
+          </a>
         </div>
 
-        {/* Image Section - Box Removed */}
-        <div className="relative h-[250px] sm:h-[350px] md:h-[550px] flex items-center justify-center animate-float px-1 md:px-4">
+        {/* Image Section - 3/4 width on desktop */}
+        <div className="relative h-[250px] sm:h-[350px] md:h-[600px] lg:h-[700px] flex items-center justify-center animate-float px-1 md:px-4 md:col-span-3">
           
           {/* Inner Glow */}
-          <div className={`absolute w-32 h-32 md:w-96 md:h-96 rounded-full filter blur-3xl opacity-40 z-0 ${isTextDark ? 'bg-white' : 'bg-blue-400'}`}></div>
+          <div className={`absolute w-32 h-32 md:w-[500px] md:h-[500px] rounded-full filter blur-3xl opacity-40 z-0 ${isTextDark ? 'bg-white' : 'bg-blue-400'}`}></div>
           
           <img 
             key={currentItem.id}
             src={currentItem.image} 
             alt={currentItem.name} 
-            className="relative z-10 max-h-[90%] w-auto object-contain drop-shadow-2xl animate-scale-in"
+            className="relative z-10 max-h-[95%] w-auto object-contain drop-shadow-2xl animate-scale-in"
           />
         </div>
       </div>
