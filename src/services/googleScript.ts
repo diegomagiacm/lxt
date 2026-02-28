@@ -1,5 +1,6 @@
-import { GOOGLE_SCRIPT_URL, BRANCHES, USED_PRODUCTS_SHEET_ID, fallbackImg } from '../../constants';
+import { GOOGLE_SCRIPT_URL, BRANCHES, USED_PRODUCTS_SHEET_ID, USED_PRODUCTS_SHEET_GID } from '../../constants';
 import { CartItem, PaymentMethod, Product } from '../../types';
+import { fetchProductsFromSheet } from './sheet';
 
 interface SaleData {
   name: string;
@@ -14,117 +15,8 @@ interface SaleData {
   finalPrice: { value: number, currency: string };
 }
 
-// Robust CSV Line Parser
-const parseCSVLine = (line: string): string[] => {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++; 
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  result.push(current.trim());
-  return result;
-};
-
 export const getUsedProducts = async (): Promise<Product[]> => {
-  try {
-    const sheetId = USED_PRODUCTS_SHEET_ID;
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=0`;
-    
-    const response = await fetch(csvUrl);
-    if (!response.ok) throw new Error('Network response was not ok');
-    
-    const csvText = await response.text();
-    const lines = csvText.split('\n');
-    
-    if (lines.length < 2) return [];
-
-    const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/^"|"$/g, '').trim());
-    const usedProducts: Product[] = [];
-
-    const getIdx = (keywords: string[]) => headers.findIndex(h => keywords.some(k => h.includes(k)));
-
-    const idxModel = getIdx(['modelo', 'equipo', 'nombre', 'producto']);
-    const idxPrice = getIdx(['precio', 'valor', 'usd', 'precio usd']);
-    const idxBattery = getIdx(['bateria', 'batería', 'bat', '%']);
-    const idxCondition = getIdx(['condicion', 'condición']);
-    const idxStatus = getIdx(['estado', 'disponibilidad', 'status']);
-    const idxColor = getIdx(['color']);
-    const idxDetails = getIdx(['detalle', 'detalles', 'obs', 'notas']);
-    const idxStorage = getIdx(['capacidad', 'memoria', 'gb', 'almacenamiento']);
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line.trim()) continue;
-
-      const cols = parseCSVLine(line);
-      const getValue = (idx: number) => (idx >= 0 && idx < cols.length) ? cols[idx].replace(/^"|"$/g, '') : '';
-
-      if (idxStatus > -1) {
-        const statusVal = getValue(idxStatus).toLowerCase();
-        if (!statusVal.includes('disponible')) continue; 
-      }
-
-      const rawName = getValue(idxModel);
-      if (!rawName) continue;
-
-      const priceStr = getValue(idxPrice);
-      const priceClean = priceStr.replace(/[^\d.]/g, '');
-      let price = parseFloat(priceClean) || 0;
-
-      if (price <= 0 && !priceStr.includes('Consultar')) continue;
-
-      price += 50; // Rule: Add 50
-
-      const battery = getValue(idxBattery);
-      const condition = getValue(idxCondition);
-      const color = getValue(idxColor);
-      const details = getValue(idxDetails);
-      const storage = getValue(idxStorage);
-
-      const modelClean = rawName.replace(/^iphone\s+/i, '').trim();
-      const storageSuffix = storage.toLowerCase().includes('gb') ? storage : `${storage}Gb`;
-      const finalName = `iPhone ${modelClean} ${storageSuffix}`.trim();
-
-      let descParts = [];
-      if (condition) descParts.push(condition);
-      if (details) descParts.push(details);
-      const desc = descParts.length > 0 ? descParts.join(' - ') : 'Usado Seleccionado';
-
-      usedProducts.push({
-        id: `used-${i}-${rawName.replace(/\s+/g, '-').toLowerCase()}`,
-        name: finalName,
-        price: price,
-        category: 'Usados',
-        description: desc,
-        stock: true,
-        image: fallbackImg, 
-        batteryHealth: battery ? (battery.includes('%') ? battery : `${battery}%`) : undefined,
-        warranty: '1 Mes', 
-        condition: condition,
-        colors: color ? [color] : []
-      });
-    }
-    return usedProducts;
-  } catch (error) {
-    console.error("Error loading spreadsheet:", error);
-    return [];
-  }
+  return fetchProductsFromSheet(USED_PRODUCTS_SHEET_ID, USED_PRODUCTS_SHEET_GID, true);
 };
 
 export const sendSaleToGoogleScript = async (data: SaleData) => {
