@@ -66,15 +66,18 @@ export const getProducts = async (): Promise<Product[]> => {
         location: p.location
       }));
     }
-    return []; 
+    console.warn('Supabase returned no products or error, falling back to local data.');
+    // Fallback to local data if Supabase is empty or fails
   }
   
   // Local API (Server-side JSON)
   try {
-    const response = await fetch('/api/products');
+    const response = await fetch('/api/products', { cache: 'no-store' });
     if (response.ok) {
       const data = await response.json();
-      return data;
+      if (Array.isArray(data) && data.length > 0) {
+        return data;
+      }
     }
   } catch (error) {
     console.error('Error fetching from API, falling back to constants:', error);
@@ -116,7 +119,8 @@ export const saveProduct = async (product: Product): Promise<boolean> => {
   } else {
     // Local API (Server-side JSON)
     try {
-      const response = await fetch(`/api/products/${product.id}`, {
+      console.log('Saving product to API:', product);
+      const response = await fetch(`/api/products/${product.id}?t=${Date.now()}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
