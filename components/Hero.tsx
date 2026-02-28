@@ -8,43 +8,48 @@ interface HeroProps {
 
 const Hero: React.FC<HeroProps> = ({ products }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [heroItems, setHeroItems] = useState<(Product & { bg: string; textDark?: boolean })[]>([]);
 
-  // Define preferred hero items by ID
-  const preferredIds = [
-    { id: 'ip16promax-256', bg: 'bg-gradient-to-br from-gray-900 to-gray-800' },
-    { id: 'ps5-pro', bg: 'bg-gradient-to-br from-blue-700 to-blue-900' },
-    { id: 'jbl-pb710', bg: 'bg-gradient-to-br from-orange-500 to-red-600' },
-    { id: 'mac-pro-m3pro-14', bg: 'bg-gradient-to-br from-gray-200 to-gray-400', textDark: true },
-    { id: 'sw2', bg: 'bg-gradient-to-br from-red-600 to-red-800' },
+  const bgGradients = [
+    'bg-gradient-to-br from-gray-900 to-gray-800',
+    'bg-gradient-to-br from-blue-700 to-blue-900',
+    'bg-gradient-to-br from-orange-500 to-red-600',
+    'bg-gradient-to-br from-gray-200 to-gray-400',
+    'bg-gradient-to-br from-purple-700 to-purple-900',
+    'bg-gradient-to-br from-emerald-600 to-teal-800',
+    'bg-gradient-to-br from-indigo-600 to-blue-800',
+    'bg-gradient-to-br from-rose-600 to-pink-800',
   ];
 
-  // Map products to hero configuration
-  let heroItems = preferredIds.map(pref => {
-    const product = products.find(p => p.id === pref.id);
-    return product ? { ...product, bg: pref.bg, textDark: (pref as any).textDark } : null;
-  }).filter((item): item is (Product & { bg: string; textDark?: boolean }) => item !== null);
+  // Helper to shuffle array
+  const shuffleArray = (array: any[]) => {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+  };
 
-  // Fallback
-  if (heroItems.length === 0 && products.length > 0) {
-    const bgColors = [
-      'bg-gradient-to-br from-gray-900 to-gray-800',
-      'bg-gradient-to-br from-blue-700 to-blue-900',
-      'bg-gradient-to-br from-orange-500 to-red-600',
-      'bg-gradient-to-br from-gray-200 to-gray-400',
-      'bg-gradient-to-br from-purple-700 to-purple-900'
-    ];
-    heroItems = products.slice(0, 5).map((p, index) => ({
-      ...p,
-      bg: bgColors[index % bgColors.length],
-      textDark: index === 3
-    }));
-  }
+  useEffect(() => {
+    if (products.length > 0) {
+      const shuffled = shuffleArray(products).slice(0, 5);
+      const items = shuffled.map((p, index) => {
+         // Pick a random gradient, but try to keep it consistent for the same index if we wanted, 
+         // but here we just pick random.
+         const bg = bgGradients[Math.floor(Math.random() * bgGradients.length)];
+         const isLightBg = bg.includes('gray-200');
+         return { ...p, bg, textDark: isLightBg };
+      });
+      setHeroItems(items);
+    }
+  }, [products]);
 
   useEffect(() => {
     if (heroItems.length === 0) return;
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % heroItems.length);
-    }, 15000); 
+    }, 5000); // Faster rotation for random items
 
     return () => clearInterval(interval);
   }, [heroItems.length]);
@@ -65,7 +70,7 @@ const Hero: React.FC<HeroProps> = ({ products }) => {
         {/* Text Section */}
         <div className={`flex flex-col items-center md:items-start text-center md:text-left space-y-6 animate-fade-in-up ${isTextDark ? 'text-gray-900' : 'text-white'}`}>
           <span className="inline-block px-4 py-1 rounded-full border border-current text-sm font-bold tracking-widest uppercase opacity-80">
-            Destacado del Mes
+            Destacado
           </span>
           <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight">
             {currentItem.name}
@@ -83,14 +88,8 @@ const Hero: React.FC<HeroProps> = ({ products }) => {
           </button>
         </div>
 
-        {/* Image Section with Frame */}
+        {/* Image Section - Box Removed */}
         <div className="relative h-[450px] md:h-[550px] flex items-center justify-center animate-float px-4">
-          
-          {/* Main Frame/Recuadro */}
-          <div className={`absolute inset-0 m-auto w-[90%] h-[90%] md:w-[80%] md:h-[80%] rounded-[2.5rem] transform rotate-3 
-            ${isTextDark ? 'bg-white/40 border-white/50' : 'bg-white/10 border-white/20'} 
-            backdrop-blur-xl border-2 shadow-2xl z-0`}>
-          </div>
           
           {/* Inner Glow */}
           <div className={`absolute w-64 h-64 md:w-96 md:h-96 rounded-full filter blur-3xl opacity-40 z-0 ${isTextDark ? 'bg-white' : 'bg-blue-400'}`}></div>
@@ -104,8 +103,8 @@ const Hero: React.FC<HeroProps> = ({ products }) => {
         </div>
       </div>
 
-      {/* Circular Banners - Lowered Position */}
-      <div key={currentIndex} className="absolute top-[60%] right-4 md:right-12 flex flex-col gap-5 pointer-events-none z-50">
+      {/* Circular Banners - High Z-Index but below Navbar (Navbar is z-[100]) */}
+      <div key={currentIndex} className="absolute top-[60%] right-4 md:right-12 flex flex-col gap-5 pointer-events-none z-[90]">
         
         {/* Banner 1: Cuotas */}
         <div className="w-24 h-24 md:w-32 md:h-32 bg-white/95 backdrop-blur-xl rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-4 border-orange-100 flex flex-col items-center justify-center text-center p-2 animate-bounce-in" style={{ animationDelay: '0.2s' }}>
