@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
 import { ShoppingBag, CreditCard, Truck } from 'lucide-react';
+import { fallbackImg } from '../constants';
 
 interface HeroProps {
   products: Product[];
@@ -33,7 +34,14 @@ const Hero: React.FC<HeroProps> = ({ products }) => {
 
   useEffect(() => {
     if (products.length > 0) {
-      const productsWithImages = products.filter(p => p.image && p.image.trim() !== '');
+      // Filter out products with no image or using the fallback logo
+      const productsWithImages = products.filter(p => 
+        p.image && 
+        p.image.trim() !== '' && 
+        p.image !== fallbackImg &&
+        !p.image.includes('lxtlogo.png') // Extra safety check
+      );
+      
       const shuffled = shuffleArray(productsWithImages).slice(0, 5);
       const items = shuffled.map((p, index) => {
          // Pick a random gradient, but try to keep it consistent for the same index if we wanted, 
