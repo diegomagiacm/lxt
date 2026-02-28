@@ -125,12 +125,13 @@ export const PRODUCTS: Product[] = [
   // ==========================================
   // SAMSUNG
   // ==========================================
-  { id: 'sam-a07', name: 'Samsung A07 64GB', price: 130, category: 'Samsung', description: 'Entry Level', stock: true, image: fallbackImg },
-  { id: 'sam-a16', name: 'Samsung A16 128GB', price: 185, category: 'Samsung', description: 'Básico Potente', stock: true, image: fallbackImg },
+  { id: 'sam-a06', name: 'Samsung A06 64GB', price: 115, category: 'Samsung', description: 'Entry Level', stock: true, image: 'https://jecxqmertgnogjetodao.supabase.co/storage/v1/object/public/LXT2/SamXia/A06_black-removebg-preview.png' },
+  { id: 'sam-a07', name: 'Samsung A07 64GB', price: 130, category: 'Samsung', description: 'Entry Level', stock: true, image: 'https://jecxqmertgnogjetodao.supabase.co/storage/v1/object/public/LXT2/SamXia/a07_black-removebg-preview.png' },
+  { id: 'sam-a16', name: 'Samsung A16 128GB', price: 185, category: 'Samsung', description: 'Básico Potente', stock: true, image: 'https://jecxqmertgnogjetodao.supabase.co/storage/v1/object/public/LXT2/SamXia/A16_gris-removebg-preview.png' },
   { id: 'sam-a17', name: 'Samsung A17 256GB', price: 280, category: 'Samsung', description: '5G', stock: true, image: fallbackImg },
   { id: 'sam-a26', name: 'Samsung A26 256GB', price: 280, category: 'Samsung', description: '5G', stock: true, image: fallbackImg },
-  { id: 'sam-a36-128', name: 'Samsung A36 128GB', price: 320, category: 'Samsung', description: 'Mid Range', stock: true, image: fallbackImg },
-  { id: 'sam-a36-256', name: 'Samsung A36 256GB', price: 350, category: 'Samsung', description: 'Mid Range+', stock: true, image: fallbackImg },
+  { id: 'sam-a36-128', name: 'Samsung A36 128GB', price: 320, category: 'Samsung', description: 'Mid Range', stock: true, image: 'https://jecxqmertgnogjetodao.supabase.co/storage/v1/object/public/LXT2/SamXia/a36_white-removebg-preview.png' },
+  { id: 'sam-a36-256', name: 'Samsung A36 256GB', price: 350, category: 'Samsung', description: 'Mid Range+', stock: true, image: 'https://jecxqmertgnogjetodao.supabase.co/storage/v1/object/public/LXT2/SamXia/a36_white-removebg-preview.png' },
   { id: 'sam-a56-128', name: 'Samsung A56 128GB', price: 420, category: 'Samsung', description: 'Premium Mid', stock: true, image: fallbackImg },
   { id: 'sam-a56-256', name: 'Samsung A56 256GB', price: 430, category: 'Samsung', description: 'Premium Mid+', stock: true, image: fallbackImg },
   { id: 'sam-s25', name: 'Samsung S25 256GB', price: 740, category: 'Samsung', description: 'Flagship Compact', stock: true, image: fallbackImg },
@@ -144,6 +145,10 @@ export const PRODUCTS: Product[] = [
   // ==========================================
   // XIAOMI
   // ==========================================
+  { id: 'xiao-redmi-14', name: 'Xiaomi Redmi 14', price: 180, category: 'Xiaomi', description: 'Nuevo Modelo', stock: true, image: 'https://jecxqmertgnogjetodao.supabase.co/storage/v1/object/public/LXT2/SamXia/redmi14-removebg-preview.png' },
+  { id: 'xiao-14c', name: 'Xiaomi Redmi 14C', price: 150, category: 'Xiaomi', description: 'Budget King', stock: true, image: 'https://jecxqmertgnogjetodao.supabase.co/storage/v1/object/public/LXT2/SamXia/redmi_14c_black-removebg-preview.png' },
+  { id: 'xiao-14-pro', name: 'Xiaomi 14 Pro', price: 400, category: 'Xiaomi', description: 'Pro Performance', stock: true, image: 'https://jecxqmertgnogjetodao.supabase.co/storage/v1/object/public/LXT2/SamXia/redmi14_pro_2-removebg-preview.png' },
+  { id: 'xiao-14-pro-plus', name: 'Xiaomi 14 Pro Plus', price: 480, category: 'Xiaomi', description: 'Flagship Killer', stock: true, image: 'https://jecxqmertgnogjetodao.supabase.co/storage/v1/object/public/LXT2/SamXia/redmi_14_pro_plus_azul-removebg-preview.png' },
   { id: 'xiao-rn13', name: 'Xiaomi Redmi Note 13 256GB', price: 230, category: 'Xiaomi', description: '108MP Camera', stock: true, image: fallbackImg },
   { id: 'xiao-rn13p', name: 'Xiaomi Redmi Note 13 Pro', price: 320, category: 'Xiaomi', description: '200MP OIS', stock: true, image: fallbackImg },
   { id: 'xiao-rn13p-plus', name: 'Xiaomi Redmi Note 13 Pro+', price: 450, category: 'Xiaomi', description: 'Curved Screen, IP68', stock: true, image: fallbackImg },
