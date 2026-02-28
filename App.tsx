@@ -3,13 +3,13 @@ import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import ProductList from './components/ProductList';
-import AdminPanel from './components/AdminPanel';
 import CartModal from './components/CartModal';
 import ProductModal from './components/ProductModal';
 import Footer from './components/Footer';
 import { Product, CartItem } from './types';
-import { PRODUCTS, fallbackImg, USED_PRODUCTS_SHEET_ID, USED_PRODUCTS_SHEET_GID, NEW_PRODUCTS_SHEET_ID, NEW_PRODUCTS_SHEET_GID } from './constants';
+import { PRODUCTS, fallbackImg, USED_PRODUCTS_SHEET_ID, USED_PRODUCTS_SHEET_GID } from './constants';
 import { fetchProductsFromSheet } from './src/services/sheet';
+import { getProducts } from './src/services/db';
 
 import DashboardLayout from './src/pages/dpanel';
 
@@ -37,23 +37,21 @@ const App: React.FC = () => {
   // Initialize with static products, then append fetched ones
   const [products, setProducts] = useState<Product[]>(PRODUCTS); 
 
-  // Fetch products from Google Sheets
+  // Fetch products
   useEffect(() => {
     const loadProducts = async () => {
       let newProducts: Product[] = [];
       let usedProducts: Product[] = [];
 
-      // 1. Fetch New Products if configured
-      if (NEW_PRODUCTS_SHEET_ID) {
-        try {
-          newProducts = await fetchProductsFromSheet(NEW_PRODUCTS_SHEET_ID, NEW_PRODUCTS_SHEET_GID, false);
-          console.log(`Loaded ${newProducts.length} new items from sheet.`);
-        } catch (error) {
-          console.error("Error loading new products sheet:", error);
-        }
+      // 1. Fetch New Products from "Backend" (Local Storage / DB)
+      try {
+        newProducts = await getProducts();
+      } catch (error) {
+        console.error("Error loading new products:", error);
+        newProducts = PRODUCTS; // Fallback
       }
 
-      // 2. Fetch Used Products
+      // 2. Fetch Used Products from Sheets
       if (USED_PRODUCTS_SHEET_ID) {
         try {
           usedProducts = await fetchProductsFromSheet(USED_PRODUCTS_SHEET_ID, USED_PRODUCTS_SHEET_GID, true);
@@ -63,19 +61,18 @@ const App: React.FC = () => {
         }
       }
 
-      setProducts(prev => {
-        // If we fetched new products, replace the static ones (PRODUCTS)
-        // Otherwise, keep static ones.
-        const baseProducts = newProducts.length > 0 ? newProducts : PRODUCTS;
-        
-        // Combine with used products
-        // Filter out any previous 'Usados' from prev if we are re-fetching (though useEffect runs once)
-        // Actually, we should just combine base + used.
-        return [...baseProducts, ...usedProducts];
-      });
+      setProducts([...newProducts, ...usedProducts]);
     };
 
     loadProducts();
+
+    // Listen for updates from Admin Panel
+    const handleStorageUpdate = () => {
+      loadProducts();
+    };
+    
+    window.addEventListener('local-storage-update', handleStorageUpdate);
+    return () => window.removeEventListener('local-storage-update', handleStorageUpdate);
   }, []);
 
   const addToCart = (product: Product, selectedColor?: string) => {

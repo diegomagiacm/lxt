@@ -763,15 +763,28 @@ const AdminDashboard: React.FC = () => {
                         </button>
                       </td>
                       <td className="px-4 py-3">
-                        {isEdited && (
+                        <div className="flex items-center">
                           <button 
-                            onClick={() => handleInlineSave(product.id)}
-                            className="text-green-600 hover:text-green-800 p-1 bg-green-50 rounded mr-2"
-                            title="Guardar cambios"
+                            onClick={() => {
+                              setEditingProduct(product);
+                              setIsProductModalOpen(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-800 p-1 bg-blue-50 rounded mr-2"
+                            title="Editar Detalles"
                           >
-                            <Save className="w-4 h-4" />
+                            <Edit className="w-4 h-4" />
                           </button>
-                        )}
+                          
+                          {isEdited && (
+                            <button 
+                              onClick={() => handleInlineSave(product.id)}
+                              className="text-green-600 hover:text-green-800 p-1 bg-green-50 rounded mr-2"
+                              title="Guardar cambios rápidos"
+                            >
+                              <Save className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -833,7 +846,9 @@ const AdminDashboard: React.FC = () => {
       {isProductModalOpen && editingProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">Crear Producto</h3>
+            <h3 className="text-xl font-bold mb-4">
+              {products.some(p => p.id === editingProduct.id) ? 'Editar Producto' : 'Crear Producto'}
+            </h3>
             <form onSubmit={handleSaveNewProduct} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Imagen</label>

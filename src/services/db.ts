@@ -2,9 +2,25 @@ import { supabase, isSupabaseConfigured } from '../../supabaseClient';
 import { Product } from '../../types';
 import { PRODUCTS } from '../../constants';
 
-// Mock storage
-let MOCK_PRODUCTS = [...PRODUCTS];
-let MOCK_SALES: any[] = [];
+const STORAGE_KEYS = {
+  PRODUCTS: 'app_products_v2', // Versioned to force refresh from constants
+  SALES: 'app_sales'
+};
+
+// Helper to get from storage
+const getFromStorage = <T>(key: string, defaultVal: T): T => {
+  if (typeof window === 'undefined') return defaultVal;
+  const stored = localStorage.getItem(key);
+  return stored ? JSON.parse(stored) : defaultVal;
+};
+
+// Helper to save to storage
+const saveToStorage = (key: string, val: any) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(key, JSON.stringify(val));
+  // Dispatch event for same-tab updates
+  window.dispatchEvent(new Event('local-storage-update'));
+};
 
 export const uploadImage = async (file: File): Promise<string | null> => {
   if (isSupabaseConfigured() && supabase) {
@@ -24,8 +40,13 @@ export const uploadImage = async (file: File): Promise<string | null> => {
     const { data } = supabase.storage.from('products').getPublicUrl(filePath);
     return data.publicUrl;
   }
-  // Mock upload (return a fake URL or base64 if we wanted, but for now just null or original)
-  return URL.createObjectURL(file);
+  
+  // Local: Convert to Base64 for storage
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
 };
 
 export const getProducts = async (): Promise<Product[]> => {
@@ -45,17 +66,15 @@ export const getProducts = async (): Promise<Product[]> => {
         location: p.location
       }));
     }
-    // If DB is empty, return constants but maybe we should seed?
-    // For now, if DB empty, return empty or constants? 
-    // Let's assume if connected, we use DB. If empty, it's empty.
     return []; 
   }
-  return MOCK_PRODUCTS;
+  
+  // Local Storage
+  return getFromStorage<Product[]>(STORAGE_KEYS.PRODUCTS, [...PRODUCTS]);
 };
 
 export const saveProduct = async (product: Product): Promise<boolean> => {
   if (isSupabaseConfigured() && supabase) {
-    // Check if exists
     const { data } = await supabase.from('products').select('id').eq('id', product.id).single();
     
     const payload = {
@@ -78,12 +97,17 @@ export const saveProduct = async (product: Product): Promise<boolean> => {
       return !error;
     }
   } else {
-    const idx = MOCK_PRODUCTS.findIndex(p => p.id === product.id);
+    // Local Storage
+    const products = getFromStorage<Product[]>(STORAGE_KEYS.PRODUCTS, [...PRODUCTS]);
+    const idx = products.findIndex(p => p.id === product.id);
+    
     if (idx >= 0) {
-      MOCK_PRODUCTS[idx] = product;
+      products[idx] = product;
     } else {
-      MOCK_PRODUCTS.push(product);
+      products.push(product);
     }
+    
+    saveToStorage(STORAGE_KEYS.PRODUCTS, products);
     return true;
   }
 };
@@ -91,21 +115,16 @@ export const saveProduct = async (product: Product): Promise<boolean> => {
 export const recordSale = async (sale: { userId: string, products: any[], total: number, date: string }): Promise<boolean> => {
   if (isSupabaseConfigured() && supabase) {
     const { error } = await supabase.from('sales').insert([{
-      user_id: sale.userId, // Assuming UUID if real DB, but might be username if mock
+      user_id: sale.userId, 
       product_details: sale.products,
       total_amount: sale.total,
       created_at: sale.date
     }]);
-    
-    // Also update user sales count
-    // This is a bit complex without a proper backend trigger, but we'll try
-    // We need to find the user by ID (or username if we stored that)
-    // For simplicity in this hybrid mode, we might skip the count update in DB if strict relational integrity isn't set up
-    // But let's try to update the 'sales_count' column in users table
-    
     return !error;
   } else {
-    MOCK_SALES.push({ ...sale, id: Math.random().toString() });
+    const sales = getFromStorage<any[]>(STORAGE_KEYS.SALES, []);
+    sales.push({ ...sale, id: Math.random().toString() });
+    saveToStorage(STORAGE_KEYS.SALES, sales);
     return true;
   }
 };
@@ -115,12 +134,10 @@ export const getSales = async (): Promise<any[]> => {
     const { data } = await supabase.from('sales').select('*').order('created_at', { ascending: false });
     return data || [];
   }
-  return MOCK_SALES;
+  return getFromStorage<any[]>(STORAGE_KEYS.SALES, []);
 };
 
-// Helper to calculate commissions
 export const calculateDailyCommissions = (sales: any[]) => {
-  // Group by date (YYYY-MM-DD)
   const salesByDate: Record<string, number> = {};
   
   sales.forEach(sale => {
