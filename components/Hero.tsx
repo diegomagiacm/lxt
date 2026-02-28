@@ -60,39 +60,38 @@ const Hero: React.FC<HeroProps> = ({ products }) => {
   const isTextDark = currentItem.textDark;
   
   return (
-    // Changed pt-24 to pt-20 to stick to navbar
-    <section className={`relative w-full pt-20 pb-12 overflow-hidden min-h-[650px] flex items-center transition-colors duration-1000 ease-in-out ${currentItem.bg}`}>
+    <section className={`relative w-full pt-20 md:pt-24 pb-8 md:pb-12 overflow-hidden min-h-[400px] md:min-h-[650px] flex items-center transition-colors duration-1000 ease-in-out ${currentItem.bg}`}>
       
       <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
 
-      <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-8 items-center relative z-10">
+      <div className="container mx-auto px-2 md:px-4 grid grid-cols-2 gap-2 md:gap-8 items-center relative z-10">
         
         {/* Text Section */}
-        <div className={`flex flex-col items-center md:items-start text-center md:text-left space-y-6 animate-fade-in-up ${isTextDark ? 'text-gray-900' : 'text-white'}`}>
-          <span className="inline-block px-4 py-1 rounded-full border border-current text-sm font-bold tracking-widest uppercase opacity-80">
+        <div className={`flex flex-col items-start text-left space-y-2 md:space-y-6 animate-fade-in-up ${isTextDark ? 'text-gray-900' : 'text-white'}`}>
+          <span className="inline-block px-2 md:px-4 py-0.5 md:py-1 rounded-full border border-current text-[10px] md:text-sm font-bold tracking-widest uppercase opacity-80">
             Destacado
           </span>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-6xl font-black tracking-tight leading-tight">
             {currentItem.name}
           </h1>
-          <p className={`text-lg md:text-xl max-w-lg opacity-90 font-medium`}>
+          <p className={`text-xs sm:text-sm md:text-xl max-w-lg opacity-90 font-medium line-clamp-3 md:line-clamp-none`}>
             {currentItem.description}
           </p>
           <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-bold">USD {currentItem.price}</span>
+            <span className="text-xl sm:text-2xl md:text-5xl font-bold">USD {currentItem.price}</span>
           </div>
           
-          <button className={`mt-4 px-8 py-4 rounded-full font-bold text-lg shadow-lg transform transition hover:scale-105 flex items-center gap-2 ${isTextDark ? 'bg-gray-900 text-white hover:bg-black' : 'bg-white text-gray-900 hover:bg-gray-100'}`}>
-            <ShoppingBag className="w-5 h-5" />
+          <button className={`mt-2 md:mt-4 px-4 py-2 md:px-8 md:py-4 rounded-full font-bold text-xs md:text-lg shadow-lg transform transition hover:scale-105 flex items-center gap-1 md:gap-2 ${isTextDark ? 'bg-gray-900 text-white hover:bg-black' : 'bg-white text-gray-900 hover:bg-gray-100'}`}>
+            <ShoppingBag className="w-3 h-3 md:w-5 md:h-5" />
             Ver Producto
           </button>
         </div>
 
         {/* Image Section - Box Removed */}
-        <div className="relative h-[450px] md:h-[550px] flex items-center justify-center animate-float px-4">
+        <div className="relative h-[250px] sm:h-[350px] md:h-[550px] flex items-center justify-center animate-float px-1 md:px-4">
           
           {/* Inner Glow */}
-          <div className={`absolute w-64 h-64 md:w-96 md:h-96 rounded-full filter blur-3xl opacity-40 z-0 ${isTextDark ? 'bg-white' : 'bg-blue-400'}`}></div>
+          <div className={`absolute w-32 h-32 md:w-96 md:h-96 rounded-full filter blur-3xl opacity-40 z-0 ${isTextDark ? 'bg-white' : 'bg-blue-400'}`}></div>
           
           <img 
             key={currentItem.id}
@@ -104,18 +103,18 @@ const Hero: React.FC<HeroProps> = ({ products }) => {
       </div>
 
       {/* Circular Banners - High Z-Index but below Navbar (Navbar is z-[100]) */}
-      <div key={currentIndex} className="absolute top-[60%] right-4 md:right-12 flex flex-col gap-5 pointer-events-none z-[90]">
+      <div key={currentIndex} className="absolute top-[50%] md:top-[60%] right-1 md:right-12 flex flex-col gap-2 md:gap-5 pointer-events-none z-[90]">
         
         {/* Banner 1: Cuotas */}
-        <div className="w-24 h-24 md:w-32 md:h-32 bg-white/95 backdrop-blur-xl rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-4 border-orange-100 flex flex-col items-center justify-center text-center p-2 animate-bounce-in" style={{ animationDelay: '0.2s' }}>
-          <CreditCard className="w-6 h-6 text-orange-600 mb-1" />
-          <span className="text-xs font-bold text-gray-800 leading-tight uppercase tracking-tight">Hasta<br/><span className="text-2xl font-black text-orange-600">12</span><br/>Cuotas</span>
+        <div className="w-16 h-16 md:w-32 md:h-32 bg-white/95 backdrop-blur-xl rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-2 md:border-4 border-orange-100 flex flex-col items-center justify-center text-center p-1 md:p-2 animate-bounce-in" style={{ animationDelay: '0.2s' }}>
+          <CreditCard className="w-3 h-3 md:w-6 md:h-6 text-orange-600 mb-0.5 md:mb-1" />
+          <span className="text-[8px] md:text-xs font-bold text-gray-800 leading-tight uppercase tracking-tight">Hasta<br/><span className="text-sm md:text-2xl font-black text-orange-600">12</span><br/>Cuotas</span>
         </div>
 
         {/* Banner 2: Envíos */}
-        <div className="w-24 h-24 md:w-32 md:h-32 bg-white/95 backdrop-blur-xl rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-4 border-green-100 flex flex-col items-center justify-center text-center p-2 animate-bounce-in" style={{ animationDelay: '0.4s' }}>
-          <Truck className="w-6 h-6 text-green-600 mb-1" />
-          <span className="text-xs font-bold text-gray-800 leading-tight uppercase tracking-tight">Envíos<br/>a todo<br/>el País</span>
+        <div className="w-16 h-16 md:w-32 md:h-32 bg-white/95 backdrop-blur-xl rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] border-2 md:border-4 border-green-100 flex flex-col items-center justify-center text-center p-1 md:p-2 animate-bounce-in" style={{ animationDelay: '0.4s' }}>
+          <Truck className="w-3 h-3 md:w-6 md:h-6 text-green-600 mb-0.5 md:mb-1" />
+          <span className="text-[8px] md:text-xs font-bold text-gray-800 leading-tight uppercase tracking-tight">Envíos<br/>a todo<br/>el País</span>
         </div>
 
       </div>
