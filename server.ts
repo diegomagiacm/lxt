@@ -1,43 +1,80 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
 
 // Helper for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Import initial products (we'll need to read this file manually or import it if possible)
-// Since importing TS files directly in Node without compilation can be tricky with some setups,
-// we'll try to import it. If it fails, we'll fallback to an empty array and let the client handle initialization.
-// However, tsx handles TS imports fine.
+// Import initial products
 import { PRODUCTS } from './constants';
 
 const app = express();
 const PORT = 3000;
 const DATA_FILE = path.join(__dirname, 'products.json');
+const SALES_FILE = path.join(__dirname, 'sales.json');
+
+// Initialize Supabase Admin Client (Server-side)
+// We try to use the Service Role Key first, but fallback to other keys if available.
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+let supabaseAdmin: any = null;
+if (supabaseUrl && supabaseKey) {
+  try {
+    supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+    console.log('Supabase Admin client initialized on server.');
+  } catch (err) {
+    console.error('Failed to initialize Supabase Admin:', err);
+  }
+}
 
 app.use(cors());
 app.use(express.json());
 
-// Initialize data file if it doesn't exist
+// Initialize data files if they don't exist
 if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(PRODUCTS, null, 2));
-  console.log('Initialized products.json with default data');
 }
-
-const SALES_FILE = path.join(__dirname, 'sales.json');
-
-// Initialize sales file if it doesn't exist
 if (!fs.existsSync(SALES_FILE)) {
   fs.writeFileSync(SALES_FILE, JSON.stringify([], null, 2));
 }
 
 // API Routes
-app.get('/api/products', (req, res) => {
+
+// GET Products
+app.get('/api/products', async (req, res) => {
   try {
+    // 1. Try Supabase
+    if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin.from('products').select('*');
+      if (!error && data && data.length > 0) {
+        return res.json(data.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          price: Number(p.price),
+          category: p.category,
+          description: p.description,
+          image: p.image_url,
+          stock: p.stock,
+          colors: p.colors,
+          variants: p.variants || [],
+          location: p.location
+        })));
+      }
+    }
+
+    // 2. Fallback to Local File
     if (fs.existsSync(DATA_FILE)) {
       const data = fs.readFileSync(DATA_FILE, 'utf-8');
       res.json(JSON.parse(data));
@@ -50,6 +87,7 @@ app.get('/api/products', (req, res) => {
   }
 });
 
+// POST Products (Bulk overwrite - mostly for initialization)
 app.post('/api/products', (req, res) => {
   try {
     const newProducts = req.body;
@@ -61,53 +99,87 @@ app.post('/api/products', (req, res) => {
   }
 });
 
-app.put('/api/products/:id', (req, res) => {
+// PUT Product (Update single product)
+app.put('/api/products/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const updatedProduct = req.body;
     
     console.log(`Received update for product ID: ${id}`);
-    console.log('Updated product data:', JSON.stringify(updatedProduct, null, 2));
 
+    // 1. Try Supabase Update
+    if (supabaseAdmin) {
+      const payload = {
+        name: updatedProduct.name,
+        price: updatedProduct.price,
+        category: updatedProduct.category,
+        description: updatedProduct.description,
+        image_url: updatedProduct.image,
+        stock: updatedProduct.stock,
+        colors: updatedProduct.colors,
+        variants: updatedProduct.variants,
+        location: updatedProduct.location
+      };
+
+      // Check if exists
+      const { data } = await supabaseAdmin.from('products').select('id').eq('id', id).single();
+      
+      let error;
+      if (data) {
+        const result = await supabaseAdmin.from('products').update(payload).eq('id', id);
+        error = result.error;
+      } else {
+        const result = await supabaseAdmin.from('products').insert([{ ...payload, id }]);
+        error = result.error;
+      }
+
+      if (error) {
+        console.error('Supabase update error:', error);
+        // Don't fail yet, try local file as backup? 
+        // Or maybe we should fail if Supabase is configured but fails.
+        // Let's try to keep both in sync if possible, or just rely on Supabase.
+      } else {
+        console.log('Product updated in Supabase');
+      }
+    }
+
+    // 2. Always update Local File (as cache/backup)
     let products = [];
     if (fs.existsSync(DATA_FILE)) {
       try {
-        const fileContent = fs.readFileSync(DATA_FILE, 'utf-8');
-        products = JSON.parse(fileContent);
-        if (!Array.isArray(products)) {
-          console.error('products.json is not an array, resetting to empty array');
-          products = [];
-        }
-      } catch (e) {
-        console.error('Error parsing products.json:', e);
-        products = [];
-      }
+        products = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+        if (!Array.isArray(products)) products = [];
+      } catch (e) { products = []; }
     } else {
       products = [...PRODUCTS];
     }
 
     const index = products.findIndex((p: any) => String(p.id) === String(id));
-    
     if (index !== -1) {
-      console.log(`Product found at index ${index}, updating...`);
-      // Ensure ID is preserved if not in body
       products[index] = { ...products[index], ...updatedProduct, id: id };
     } else {
-      console.log('Product not found, creating new...');
       products.push({ ...updatedProduct, id: id });
     }
 
     fs.writeFileSync(DATA_FILE, JSON.stringify(products, null, 2));
-    console.log('Product saved successfully');
     res.json({ success: true });
+
   } catch (error) {
     console.error('Error updating product:', error);
     res.status(500).json({ error: `Failed to update product: ${(error as Error).message}` });
   }
 });
 
-app.get('/api/sales', (req, res) => {
+// GET Sales
+app.get('/api/sales', async (req, res) => {
   try {
+    if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin.from('sales').select('*').order('created_at', { ascending: false });
+      if (!error && data) {
+        return res.json(data);
+      }
+    }
+
     if (fs.existsSync(SALES_FILE)) {
       const data = fs.readFileSync(SALES_FILE, 'utf-8');
       res.json(JSON.parse(data));
@@ -120,17 +192,33 @@ app.get('/api/sales', (req, res) => {
   }
 });
 
-app.post('/api/sales', (req, res) => {
+// POST Sale
+app.post('/api/sales', async (req, res) => {
   try {
     const newSale = req.body;
+
+    // 1. Try Supabase
+    if (supabaseAdmin) {
+      const { error } = await supabaseAdmin.from('sales').insert([{
+        user_id: newSale.userId, 
+        product_details: newSale.products,
+        total_amount: newSale.total,
+        created_at: newSale.date
+      }]);
+      
+      if (error) {
+        console.error('Supabase sale error:', error);
+      }
+    }
+
+    // 2. Update Local File
     let sales = [];
     if (fs.existsSync(SALES_FILE)) {
       sales = JSON.parse(fs.readFileSync(SALES_FILE, 'utf-8'));
     }
-    
     sales.push({ ...newSale, id: Math.random().toString() });
-    
     fs.writeFileSync(SALES_FILE, JSON.stringify(sales, null, 2));
+    
     res.json({ success: true });
   } catch (error) {
     console.error('Error saving sale:', error);
@@ -146,7 +234,6 @@ if (process.env.NODE_ENV !== 'production') {
   });
   app.use(vite.middlewares);
 } else {
-  // Serve static files in production
   app.use(express.static(path.join(__dirname, 'dist')));
 }
 

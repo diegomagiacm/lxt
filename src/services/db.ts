@@ -50,27 +50,7 @@ export const uploadImage = async (file: File): Promise<string | null> => {
 };
 
 export const getProducts = async (): Promise<Product[]> => {
-  if (isSupabaseConfigured() && supabase) {
-    const { data, error } = await supabase.from('products').select('*');
-    if (!error && data && data.length > 0) {
-      return data.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        price: Number(p.price),
-        category: p.category,
-        description: p.description,
-        image: p.image_url,
-        stock: p.stock,
-        colors: p.colors,
-        variants: p.variants || [],
-        location: p.location
-      }));
-    }
-    console.warn('Supabase returned no products or error, falling back to local data.');
-    // Fallback to local data if Supabase is empty or fails
-  }
-  
-  // Local API (Server-side JSON)
+  // Always use Server API to avoid "Forbidden use of secret API key in browser"
   try {
     const response = await fetch('/api/products', { cache: 'no-store' });
     if (response.ok) {
@@ -86,107 +66,59 @@ export const getProducts = async (): Promise<Product[]> => {
 };
 
 export const saveProduct = async (product: Product): Promise<boolean> => {
-  if (isSupabaseConfigured() && supabase) {
-    const { data } = await supabase.from('products').select('id').eq('id', product.id).single();
+  // Always use Server API for writes to avoid "Forbidden use of secret API key in browser"
+  // The server will handle the Supabase connection using the Service Role Key if available.
+  try {
+    console.log('Saving product to API:', product);
+    const response = await fetch(`/api/products/${product.id}?t=${Date.now()}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(product)
+    });
     
-    const payload = {
-      name: product.name,
-      price: product.price,
-      category: product.category,
-      description: product.description,
-      image_url: product.image,
-      stock: product.stock,
-      colors: product.colors,
-      variants: product.variants,
-      location: product.location
-    };
-
-    if (data) {
-      const { error } = await supabase.from('products').update(payload).eq('id', product.id);
-      if (error) {
-        console.error('Supabase update error:', error);
-        alert(`Error Supabase: ${error.message}`);
-      }
-      return !error;
-    } else {
-      const { error } = await supabase.from('products').insert([{ ...payload, id: product.id }]);
-      if (error) {
-        console.error('Supabase insert error:', error);
-        alert(`Error Supabase: ${error.message}`);
-      }
-      return !error;
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      console.error('API Error Details:', errData);
+      alert(`Error del servidor: ${errData.error || response.statusText}`);
     }
-  } else {
-    // Local API (Server-side JSON)
-    try {
-      console.log('Saving product to API:', product);
-      const response = await fetch(`/api/products/${product.id}?t=${Date.now()}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(product)
-      });
-      
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        console.error('API Error Details:', errData);
-        alert(`Error del servidor: ${errData.error || response.statusText}`);
-      }
-      
-      return response.ok;
-    } catch (error) {
-      console.error('Error saving to API:', error);
-      alert(`Error de conexión: ${error}`);
-      return false;
-    }
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Error saving to API:', error);
+    alert(`Error de conexión: ${error}`);
+    return false;
   }
 };
 
 export const recordSale = async (sale: { userId: string, products: any[], total: number, date: string }): Promise<boolean> => {
-  if (isSupabaseConfigured() && supabase) {
-    const { error } = await supabase.from('sales').insert([{
-      user_id: sale.userId, 
-      product_details: sale.products,
-      total_amount: sale.total,
-      created_at: sale.date
-    }]);
-    if (error) {
-      console.error('Supabase sale error:', error);
-      alert(`Error Supabase: ${error.message}`);
+  // Always use Server API for writes
+  try {
+    const response = await fetch('/api/sales', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(sale)
+    });
+    
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      console.error('API Error Details:', errData);
+      alert(`Error del servidor: ${errData.error || response.statusText}`);
     }
-    return !error;
-  } else {
-    try {
-      const response = await fetch('/api/sales', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(sale)
-      });
-      
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        console.error('API Error Details:', errData);
-        alert(`Error del servidor: ${errData.error || response.statusText}`);
-      }
 
-      return response.ok;
-    } catch (error) {
-      console.error('Error recording sale to API:', error);
-      alert(`Error de conexión: ${error}`);
-      return false;
-    }
+    return response.ok;
+  } catch (error) {
+    console.error('Error recording sale to API:', error);
+    alert(`Error de conexión: ${error}`);
+    return false;
   }
 };
 
 export const getSales = async (): Promise<any[]> => {
-  if (isSupabaseConfigured() && supabase) {
-    const { data } = await supabase.from('sales').select('*').order('created_at', { ascending: false });
-    return data || [];
-  }
-  
+  // Always use Server API
   try {
     const response = await fetch('/api/sales');
     if (response.ok) {
