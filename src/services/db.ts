@@ -1,4 +1,3 @@
-import { supabase, isSupabaseConfigured } from '../../supabaseClient';
 import { Product } from '../../types';
 import { PRODUCTS } from '../../constants';
 
@@ -23,24 +22,6 @@ const saveToStorage = (key: string, val: any) => {
 };
 
 export const uploadImage = async (file: File): Promise<string | null> => {
-  if (isSupabaseConfigured() && supabase) {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('products')
-      .upload(filePath, file);
-
-    if (uploadError) {
-      console.error('Error uploading image:', uploadError);
-      return null;
-    }
-
-    const { data } = supabase.storage.from('products').getPublicUrl(filePath);
-    return data.publicUrl;
-  }
-  
   // Local: Convert to Base64 for storage
   return new Promise((resolve) => {
     const reader = new FileReader();

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { INITIAL_USERS } from '../constants';
 import { User } from '../types';
-import { supabase } from '../supabaseClient'; // Included for structure, even if mocking here
 
 const AdminPanel: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
