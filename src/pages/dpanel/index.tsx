@@ -10,6 +10,9 @@ import { LogOut, LayoutDashboard, Key, X } from 'lucide-react';
 const DashboardLayout: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  
+  console.log('DashboardLayout rendered, user:', user?.username);
+
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordMessage, setPasswordMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
@@ -116,6 +119,7 @@ const DashboardLayout: React.FC = () => {
               <div className="text-center mt-10">Redirigiendo...</div>
             )
           } />
+          <Route path="*" element={<Login onLogin={handleLogin} />} />
         </Routes>
       </div>
 

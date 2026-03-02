@@ -129,10 +129,12 @@ app.post('/api/products/seed', async (req, res) => {
 // GET Products
 app.get('/api/products', async (req, res) => {
   try {
+    console.log('GET /api/products requested');
     // 1. Try Supabase
     if (supabaseAdmin) {
       const { data, error } = await supabaseAdmin.from('products').select('*');
       if (!error && data && data.length > 0) {
+        console.log(`Returning ${data.length} products from Supabase`);
         return res.json(data.map((p: any) => ({
           id: p.id,
           name: p.name,
@@ -147,13 +149,22 @@ app.get('/api/products', async (req, res) => {
           location: p.location
         })));
       }
+      if (error) console.error('Supabase error fetching products:', error);
+      else console.log('Supabase returned no products, falling back to local file');
     }
 
     // 2. Fallback to Local File
     if (fs.existsSync(DATA_FILE)) {
+      console.log('Reading products from products.json at:', DATA_FILE);
       const data = fs.readFileSync(DATA_FILE, 'utf-8');
-      res.json(JSON.parse(data));
+      const parsed = JSON.parse(data);
+      console.log(`Returning ${parsed.length} products from products.json`);
+      if (parsed.length === 0) {
+        console.warn('products.json is empty!');
+      }
+      res.json(parsed);
     } else {
+      console.log('products.json not found, returning empty array from constants');
       res.json(PRODUCTS);
     }
   } catch (error) {

@@ -178,15 +178,21 @@ const ProductList: React.FC<ProductListProps> = ({ products, onProductSelect }) 
       if (!matchesSearch) return false;
       if (!category) return true;
 
-      if (SECTIONS.includes(category)) return p.category === category;
-      if (category === 'Usados') return p.category === 'Usados';
-      
-      if (category === 'Otros') {
-         return !SECTIONS.includes(p.category) && p.category !== 'Laptops' && p.category !== 'Usados'; 
+      const pCat = p.category.toLowerCase();
+      const sCat = category.toLowerCase();
+
+      if (SECTIONS.map(s => s.toLowerCase()).includes(sCat)) {
+        return pCat.includes(sCat);
       }
-      if (category === 'Laptops') return p.category === 'Laptops';
       
-      return false;
+      if (sCat === 'usados') return pCat === 'usados';
+      
+      if (sCat === 'otros') {
+         return !SECTIONS.some(s => pCat.includes(s.toLowerCase())) && pCat !== 'laptops' && pCat !== 'usados'; 
+      }
+      if (sCat === 'laptops') return pCat === 'laptops' || pCat.includes('macbook');
+      
+      return pCat === sCat;
     });
   };
 

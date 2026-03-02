@@ -17,6 +17,8 @@ import DashboardLayout from './src/pages/dpanel';
 const Layout: React.FC<{ children: React.ReactNode; cartCount: number; openCart: () => void }> = ({ children, cartCount, openCart }) => {
   const location = useLocation();
   const isDashboard = location.pathname.startsWith('/dpanel');
+  
+  console.log('Current Path:', location.pathname, 'isDashboard:', isDashboard);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -40,14 +42,16 @@ const App: React.FC = () => {
   // Fetch products
   useEffect(() => {
     const loadProducts = async () => {
+      console.log("App: Starting to load products...");
       let newProducts: Product[] = [];
       let usedProducts: Product[] = [];
 
       // 1. Fetch New Products from "Backend" (Local Storage / DB)
       try {
         newProducts = await getProducts();
+        console.log(`App: Loaded ${newProducts.length} new products from API.`);
       } catch (error) {
-        console.error("Error loading new products:", error);
+        console.error("App: Error loading new products:", error);
         newProducts = PRODUCTS; // Fallback
       }
 
@@ -55,10 +59,14 @@ const App: React.FC = () => {
       if (USED_PRODUCTS_SHEET_ID) {
         try {
           usedProducts = await fetchProductsFromSheet(USED_PRODUCTS_SHEET_ID, USED_PRODUCTS_SHEET_GID, true);
-          console.log(`Loaded ${usedProducts.length} used items from sheet.`);
+          console.log(`App: Loaded ${usedProducts.length} used items from sheet.`);
         } catch (error) {
-          console.error("Error loading used products sheet:", error);
+          console.error("App: Error loading used products sheet:", error);
         }
+      }
+
+      if (newProducts.length === 0 && usedProducts.length === 0) {
+        console.warn("App: No products loaded at all!");
       }
 
       setProducts([...newProducts, ...usedProducts]);
