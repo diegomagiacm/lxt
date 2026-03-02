@@ -306,6 +306,52 @@ app.post('/api/sales', async (req, res) => {
 // USER MANAGEMENT ENDPOINTS
 // ==========================================
 
+// POST Seed Users (Load from users.json to Supabase)
+app.post('/api/users/seed', async (req, res) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(400).json({ error: 'Supabase not configured' });
+    }
+
+    // Read users.json
+    let users = [];
+    if (fs.existsSync(USERS_FILE)) {
+      users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+    }
+
+    console.log(`Seeding ${users.length} users to Supabase...`);
+
+    for (const user of users) {
+      // Check if user exists to avoid duplicate key errors if ID is different
+      const { data: existing } = await supabaseAdmin.from('users').select('id').eq('username', user.username).single();
+      
+      if (existing) {
+        // Update
+        await supabaseAdmin.from('users').update({
+          code: user.code,
+          role: user.role,
+          sales_count: user.sales_count || 0,
+          extra_hours: user.extra_hours || 0
+        }).eq('username', user.username);
+      } else {
+        // Insert
+        await supabaseAdmin.from('users').insert([{
+          username: user.username,
+          code: user.code,
+          role: user.role,
+          sales_count: user.sales_count || 0,
+          extra_hours: user.extra_hours || 0
+        }]);
+      }
+    }
+
+    res.json({ success: true, count: users.length });
+  } catch (error: any) {
+    console.error('Error seeding users:', error);
+    res.status(500).json({ error: `Failed to seed users: ${error.message}` });
+  }
+});
+
 // POST Login
 app.post('/api/auth/login', async (req, res) => {
   let { username, code } = req.body;
@@ -315,6 +361,9 @@ app.post('/api/auth/login', async (req, res) => {
   code = code?.trim();
 
   try {
+    let user = null;
+
+    // 1. Try Supabase first
     if (supabaseAdmin) {
       const { data, error } = await supabaseAdmin
         .from('users')
@@ -323,26 +372,22 @@ app.post('/api/auth/login', async (req, res) => {
         .eq('code', code)
         .single();
 
-      if (error || !data) {
-        return res.status(401).json({ error: 'Credenciales inválidas' });
+      if (!error && data) {
+        user = data;
       }
-
-      return res.json({
-        user: {
-          username: data.username,
-          code: data.code,
-          role: data.role,
-          salesCount: data.sales_count || 0,
-          extraHours: data.extra_hours || 0,
-          id: data.id
-        }
-      });
     }
     
-    // Fallback to local file if no Supabase
-    console.warn('Using local file auth for login');
-    const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
-    const user = users.find((u: any) => u.username === username && u.code === code);
+    // 2. Fallback to local file if user not found in Supabase
+    if (!user) {
+      console.warn('User not found in Supabase (or Supabase not configured), checking local file...');
+      if (fs.existsSync(USERS_FILE)) {
+        const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+        const localUser = users.find((u: any) => u.username === username && u.code === code);
+        if (localUser) {
+          user = localUser;
+        }
+      }
+    }
 
     if (user) {
       return res.json({
@@ -356,8 +401,9 @@ app.post('/api/auth/login', async (req, res) => {
         }
       });
     } else {
-      return res.status(401).json({ error: 'Credenciales inválidas (Local)' });
+      return res.status(401).json({ error: 'Credenciales inválidas' });
     }
+
   } catch (error: any) {
     console.error('Login error details:', error);
     res.status(500).json({ error: `Login failed: ${error.message || JSON.stringify(error)}` });

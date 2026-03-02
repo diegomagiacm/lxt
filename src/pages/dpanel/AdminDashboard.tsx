@@ -319,6 +319,28 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleSeedUsers = async () => {
+    if (!confirm('¿Estás seguro de que deseas restaurar los usuarios desde el archivo local?')) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch('/api/users/seed', { method: 'POST' });
+      const data = await response.json();
+      
+      if (response.ok) {
+        alert(`Usuarios restaurados con éxito (${data.count}).`);
+        loadData();
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error seeding users:', error);
+      alert('Error de conexión al restaurar usuarios.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center">Cargando...</div>;
 
   return (
@@ -353,6 +375,15 @@ const AdminDashboard: React.FC = () => {
             className="text-xs text-gray-500 hover:text-red-600 underline"
           >
             Restaurar Base de Datos
+          </button>
+        )}
+        
+        {activeTab === 'users' && (
+          <button 
+            onClick={handleSeedUsers}
+            className="text-xs text-gray-500 hover:text-red-600 underline"
+          >
+            Restaurar Usuarios
           </button>
         )}
       </div>
