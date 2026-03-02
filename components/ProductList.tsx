@@ -39,7 +39,7 @@ const ProductSection: React.FC<ProductSectionProps> = ({ title, products, viewMo
               }
               ${isUsedSection && !isListView ? 'border-2 border-orange-50 hover:border-orange-300' : ''}
               ${isUsedSection && isListView ? 'bg-orange-50/30' : ''}
-              ${!product.stock ? 'opacity-60 grayscale' : ''}
+              ${!product.stock ? 'opacity-90 grayscale-[0.5]' : ''}
             `}
             style={{ animationDelay: `${Math.min(index * 0.05, 1)}s` }}
           >

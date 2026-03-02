@@ -103,6 +103,10 @@ const App: React.FC = () => {
     <BrowserRouter>
       <Layout cartCount={totalItems} openCart={() => setIsCartOpen(true)}>
         <Routes>
+          {/* Dashboard Route - Must be first to avoid matching root */}
+          <Route path="/dpanel/*" element={<DashboardLayout />} />
+          
+          {/* Main Shop Route */}
           <Route path="/" element={
             <main>
               <Hero products={products} />
@@ -111,7 +115,6 @@ const App: React.FC = () => {
               </div>
             </main>
           } />
-          <Route path="/dpanel/*" element={<DashboardLayout />} />
         </Routes>
 
         {isCartOpen && (
