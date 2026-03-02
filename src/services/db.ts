@@ -36,9 +36,12 @@ export const getProducts = async (): Promise<Product[]> => {
     const response = await fetch('/api/products', { cache: 'no-store' });
     if (response.ok) {
       const data = await response.json();
+      console.log('db.ts: API response data length:', data.length);
       if (Array.isArray(data) && data.length > 0) {
         return data;
       }
+    } else {
+      console.error('db.ts: API response NOT OK:', response.status);
     }
   } catch (error) {
     console.error('Error fetching from API, falling back to constants:', error);

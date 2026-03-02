@@ -49,7 +49,7 @@ const App: React.FC = () => {
       // 1. Fetch New Products from "Backend" (Local Storage / DB)
       try {
         newProducts = await getProducts();
-        console.log(`App: Loaded ${newProducts.length} new products from API.`);
+        console.log(`App: Loaded ${newProducts.length} new products from API.`, newProducts.slice(0, 5));
       } catch (error) {
         console.error("App: Error loading new products:", error);
         newProducts = PRODUCTS; // Fallback

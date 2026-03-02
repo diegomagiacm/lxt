@@ -15,9 +15,11 @@ import { PRODUCTS } from './constants';
 
 const app = express();
 const PORT = 3000;
-const DATA_FILE = path.join(__dirname, 'products.json');
-const SALES_FILE = path.join(__dirname, 'sales.json');
-const USERS_FILE = path.join(__dirname, 'users.json');
+const DATA_FILE = path.resolve(__dirname, 'products.json');
+const SALES_FILE = path.resolve(__dirname, 'sales.json');
+const USERS_FILE = path.resolve(__dirname, 'users.json');
+
+console.log('Server: Data paths:', { DATA_FILE, SALES_FILE, USERS_FILE });
 
 app.use(cors());
 app.use(express.json());
@@ -53,14 +55,18 @@ app.get('/api/products', (req, res) => {
     if (fs.existsSync(DATA_FILE)) {
       const data = fs.readFileSync(DATA_FILE, 'utf-8');
       const parsed = JSON.parse(data);
-      console.log(`Found products.json with ${parsed.length} products`);
+      console.log(`Server: Found products.json with ${parsed.length} products`);
+      if (parsed.length === 0) {
+        console.warn('Server: products.json is empty, returning fallback PRODUCTS');
+        return res.json(PRODUCTS);
+      }
       res.json(parsed);
     } else {
-      console.log('products.json NOT found, returning constants (empty)');
+      console.log('Server: products.json NOT found, returning constants');
       res.json(PRODUCTS);
     }
   } catch (error) {
-    console.error('Error in GET /api/products:', error);
+    console.error('Server: Error in GET /api/products:', error);
     res.status(500).json({ error: 'Failed to read products' });
   }
 });
