@@ -76,6 +76,56 @@ if (!fs.existsSync(USERS_FILE)) {
 
 // API Routes
 
+// POST Seed Products (Load from products.json to Supabase)
+app.post('/api/products/seed', async (req, res) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(400).json({ error: 'Supabase not configured' });
+    }
+
+    // Read products.json
+    let products = [];
+    if (fs.existsSync(DATA_FILE)) {
+      products = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+    } else {
+      products = [...PRODUCTS];
+    }
+
+    console.log(`Seeding ${products.length} products to Supabase...`);
+
+    // Upsert products
+    // We process in batches to avoid limits
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < products.length; i += BATCH_SIZE) {
+      const batch = products.slice(i, i + BATCH_SIZE).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        category: p.category,
+        description: p.description,
+        image_url: p.image,
+        stock: p.stock,
+        quantity: p.quantity || 0,
+        colors: p.colors,
+        variants: p.variants,
+        location: p.location
+      }));
+
+      const { error } = await supabaseAdmin.from('products').upsert(batch, { onConflict: 'id' });
+      
+      if (error) {
+        console.error('Error seeding batch:', error);
+        throw error;
+      }
+    }
+
+    res.json({ success: true, count: products.length });
+  } catch (error: any) {
+    console.error('Error seeding products:', error);
+    res.status(500).json({ error: `Failed to seed products: ${error.message}` });
+  }
+});
+
 // GET Products
 app.get('/api/products', async (req, res) => {
   try {

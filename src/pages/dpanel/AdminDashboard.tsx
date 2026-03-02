@@ -297,31 +297,64 @@ const AdminDashboard: React.FC = () => {
     p.category.toLowerCase().includes(posSearch.toLowerCase())
   );
 
+  const handleSeedDatabase = async () => {
+    if (!confirm('¿Estás seguro de que deseas restaurar la base de datos con los productos iniciales? Esto sobrescribirá los cambios existentes.')) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch('/api/products/seed', { method: 'POST' });
+      const data = await response.json();
+      
+      if (response.ok) {
+        alert(`Base de datos restaurada con éxito (${data.count} productos).`);
+        loadData();
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error seeding database:', error);
+      alert('Error de conexión al restaurar la base de datos.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center">Cargando...</div>;
 
   return (
     <div className="space-y-6">
       {currentUser && <DashboardStats user={currentUser} sales={sales} allUsers={users} />}
 
-      <div className="flex space-x-4 border-b border-gray-200 pb-2 overflow-x-auto">
-        <button 
-          className={`px-4 py-2 font-medium rounded-lg whitespace-nowrap ${activeTab === 'products' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
-          onClick={() => setActiveTab('products')}
-        >
-          Gestionar Productos
-        </button>
-        <button 
-          className={`px-4 py-2 font-medium rounded-lg whitespace-nowrap ${activeTab === 'users' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
-          onClick={() => setActiveTab('users')}
-        >
-          Gestionar Usuarios
-        </button>
-        <button 
-          className={`px-4 py-2 font-medium rounded-lg whitespace-nowrap ${activeTab === 'pos' ? 'bg-green-100 text-green-700' : 'text-gray-500 hover:bg-gray-50'}`}
-          onClick={() => setActiveTab('pos')}
-        >
-          Registrar Venta (POS)
-        </button>
+      <div className="flex justify-between items-center border-b border-gray-200 pb-2 overflow-x-auto">
+        <div className="flex space-x-4">
+          <button 
+            className={`px-4 py-2 font-medium rounded-lg whitespace-nowrap ${activeTab === 'products' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
+            onClick={() => setActiveTab('products')}
+          >
+            Gestionar Productos
+          </button>
+          <button 
+            className={`px-4 py-2 font-medium rounded-lg whitespace-nowrap ${activeTab === 'users' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
+            onClick={() => setActiveTab('users')}
+          >
+            Gestionar Usuarios
+          </button>
+          <button 
+            className={`px-4 py-2 font-medium rounded-lg whitespace-nowrap ${activeTab === 'pos' ? 'bg-green-100 text-green-700' : 'text-gray-500 hover:bg-gray-50'}`}
+            onClick={() => setActiveTab('pos')}
+          >
+            Registrar Venta (POS)
+          </button>
+        </div>
+        
+        {activeTab === 'products' && (
+          <button 
+            onClick={handleSeedDatabase}
+            className="text-xs text-gray-500 hover:text-red-600 underline"
+          >
+            Restaurar Base de Datos
+          </button>
+        )}
       </div>
 
       {activeTab === 'pos' && (
