@@ -356,6 +356,8 @@ app.post('/api/users/seed', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   let { username, code } = req.body;
   
+  console.log('Login attempt:', { username, code });
+
   // Trim whitespace
   username = username?.trim();
   code = code?.trim();
@@ -365,6 +367,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     // 1. Try Supabase first
     if (supabaseAdmin) {
+      console.log('Checking Supabase for user...');
       const { data, error } = await supabaseAdmin
         .from('users')
         .select('*')
@@ -373,19 +376,34 @@ app.post('/api/auth/login', async (req, res) => {
         .single();
 
       if (!error && data) {
+        console.log('User found in Supabase');
         user = data;
+      } else {
+        console.log('User not found in Supabase or error:', error?.message);
       }
+    } else {
+      console.log('Supabase not configured');
     }
     
     // 2. Fallback to local file if user not found in Supabase
     if (!user) {
-      console.warn('User not found in Supabase (or Supabase not configured), checking local file...');
+      console.log('Checking local file for user...');
       if (fs.existsSync(USERS_FILE)) {
-        const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+        const fileContent = fs.readFileSync(USERS_FILE, 'utf-8');
+        const users = JSON.parse(fileContent);
+        console.log(`Loaded ${users.length} users from local file.`);
+        
         const localUser = users.find((u: any) => u.username === username && u.code === code);
         if (localUser) {
+          console.log('User found in local file');
           user = localUser;
+        } else {
+          console.log('User not found in local file');
+          // Log available usernames for debugging (don't log passwords/codes)
+          console.log('Available local users:', users.map((u: any) => u.username));
         }
+      } else {
+        console.log('Local users file not found:', USERS_FILE);
       }
     }
 
@@ -547,6 +565,11 @@ if (process.env.NODE_ENV !== 'production') {
   app.use(vite.middlewares);
 } else {
   app.use(express.static(path.join(__dirname, 'dist')));
+  
+  // SPA Fallback for production
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  });
 }
 
 app.listen(PORT, '0.0.0.0', () => {
