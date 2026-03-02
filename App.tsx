@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import ProductList from './components/ProductList';
@@ -106,7 +106,7 @@ const App: React.FC = () => {
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
-    <BrowserRouter>
+    <Router>
       <Layout cartCount={totalItems} openCart={() => setIsCartOpen(true)}>
         <Routes>
           {/* Dashboard Route - Must be first to avoid matching root */}
@@ -121,6 +121,7 @@ const App: React.FC = () => {
               </div>
             </main>
           } />
+          <Route path="*" element={<div className="text-center mt-20 text-2xl">Página no encontrada</div>} />
         </Routes>
 
         {isCartOpen && (
@@ -140,7 +141,7 @@ const App: React.FC = () => {
           />
         )}
       </Layout>
-    </BrowserRouter>
+    </Router>
   );
 };
 

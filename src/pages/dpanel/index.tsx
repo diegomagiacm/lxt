@@ -112,7 +112,7 @@ const DashboardLayout: React.FC = () => {
       <div className="max-w-7xl mx-auto p-6">
         <Routes>
           <Route index element={<Login onLogin={handleLogin} />} />
-          <Route path="/dashboard" element={
+          <Route path="dashboard" element={
             user ? (
               user.role === 'admin' ? <AdminDashboard /> : <SellerDashboard user={user} />
             ) : (
