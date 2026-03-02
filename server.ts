@@ -18,6 +18,7 @@ const app = express();
 const PORT = 3000;
 const DATA_FILE = path.join(__dirname, 'products.json');
 const SALES_FILE = path.join(__dirname, 'sales.json');
+const USERS_FILE = path.join(__dirname, 'users.json');
 
 // Initialize Supabase Admin Client (Server-side)
 // We try to use the Service Role Key first, but fallback to other keys if available.
@@ -37,6 +38,8 @@ if (supabaseUrl && supabaseKey) {
   } catch (err) {
     console.error('Failed to initialize Supabase Admin:', err);
   }
+} else {
+  console.warn('Supabase credentials missing. Using local file storage for users.');
 }
 
 app.use(cors());
@@ -48,6 +51,20 @@ if (!fs.existsSync(DATA_FILE)) {
 }
 if (!fs.existsSync(SALES_FILE)) {
   fs.writeFileSync(SALES_FILE, JSON.stringify([], null, 2));
+}
+if (!fs.existsSync(USERS_FILE)) {
+  const defaultUsers = [
+    {
+      id: '1',
+      username: 'admin',
+      code: '1234',
+      role: 'admin',
+      sales_count: 0,
+      extra_hours: 0,
+      created_at: new Date().toISOString()
+    }
+  ];
+  fs.writeFileSync(USERS_FILE, JSON.stringify(defaultUsers, null, 2));
 }
 
 // API Routes
@@ -260,9 +277,25 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
     
-    // Fallback to mock if no Supabase (should not happen in prod if configured)
-    console.error('Login failed: Database not configured');
-    return res.status(500).json({ error: 'Database not configured' });
+    // Fallback to local file if no Supabase
+    console.warn('Using local file auth for login');
+    const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+    const user = users.find((u: any) => u.username === username && u.code === code);
+
+    if (user) {
+      return res.json({
+        user: {
+          username: user.username,
+          code: user.code,
+          role: user.role,
+          salesCount: user.sales_count || 0,
+          extraHours: user.extra_hours || 0,
+          id: user.id
+        }
+      });
+    } else {
+      return res.status(401).json({ error: 'Credenciales inválidas (Local)' });
+    }
   } catch (error: any) {
     console.error('Login error details:', error);
     res.status(500).json({ error: `Login failed: ${error.message || JSON.stringify(error)}` });
@@ -284,6 +317,19 @@ app.get('/api/users', async (req, res) => {
           extraHours: d.extra_hours || 0
         })));
       }
+    }
+    
+    // Fallback
+    if (fs.existsSync(USERS_FILE)) {
+      const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+      return res.json(users.map((u: any) => ({
+        id: u.id,
+        username: u.username,
+        code: u.code,
+        role: u.role,
+        salesCount: u.sales_count || 0,
+        extraHours: u.extra_hours || 0
+      })));
     }
     res.json([]);
   } catch (error) {
@@ -310,7 +356,25 @@ app.post('/api/users', async (req, res) => {
       }
       return res.json({ success: true });
     }
-    res.status(500).json({ error: 'Database not configured' });
+
+    // Fallback
+    const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+    if (users.some((u: any) => u.username === newUser.username)) {
+      return res.status(400).json({ error: 'Usuario ya existe' });
+    }
+    
+    users.push({
+      id: Math.random().toString(),
+      username: newUser.username,
+      code: newUser.code,
+      role: newUser.role,
+      sales_count: 0,
+      extra_hours: 0,
+      created_at: new Date().toISOString()
+    });
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+    res.json({ success: true });
+
   } catch (error) {
     console.error('Create user error:', error);
     res.status(500).json({ error: 'Failed to create user' });
