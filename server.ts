@@ -261,10 +261,11 @@ app.post('/api/auth/login', async (req, res) => {
     }
     
     // Fallback to mock if no Supabase (should not happen in prod if configured)
+    console.error('Login failed: Database not configured');
     return res.status(500).json({ error: 'Database not configured' });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+  } catch (error: any) {
+    console.error('Login error details:', error);
+    res.status(500).json({ error: `Login failed: ${error.message || JSON.stringify(error)}` });
   }
 });
 
