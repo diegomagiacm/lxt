@@ -159,6 +159,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onAddToCa
           <div className="mt-auto">
             <button 
               onClick={() => {
+                if (!product.stock) return;
                 if (product.variants && product.variants.length > 0 && !selectedVariant) {
                   alert("Por favor selecciona un color.");
                   return;
@@ -166,15 +167,18 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onAddToCa
                 onAddToCart(product, selectedVariant); 
                 onClose(); 
               }}
-              disabled={product.variants && product.variants.length > 0 && !selectedVariant}
+              disabled={!product.stock || (product.variants && product.variants.length > 0 && !selectedVariant)}
               className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 transform transition-all
-                ${product.variants && product.variants.length > 0 && !selectedVariant
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-xl active:scale-95'
+                ${!product.stock 
+                  ? 'bg-gray-400 text-white cursor-not-allowed'
+                  : product.variants && product.variants.length > 0 && !selectedVariant
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-xl active:scale-95'
                 }
               `}
             >
-              Agregar al Carrito <Check className="w-5 h-5" />
+              {!product.stock ? 'Sin Stock' : 'Agregar al Carrito'} 
+              {product.stock && <Check className="w-5 h-5" />}
             </button>
           </div>
         </div>

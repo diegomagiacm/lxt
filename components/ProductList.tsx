@@ -39,9 +39,17 @@ const ProductSection: React.FC<ProductSectionProps> = ({ title, products, viewMo
               }
               ${isUsedSection && !isListView ? 'border-2 border-orange-50 hover:border-orange-300' : ''}
               ${isUsedSection && isListView ? 'bg-orange-50/30' : ''}
+              ${!product.stock ? 'opacity-60 grayscale' : ''}
             `}
             style={{ animationDelay: `${Math.min(index * 0.05, 1)}s` }}
           >
+            {/* Out of Stock Badge */}
+            {!product.stock && (
+              <div className="absolute top-0 left-0 bg-gray-600 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg rounded-tl-lg z-20 shadow-sm">
+                SIN STOCK
+              </div>
+            )}
+
             {/* Badge for Used Items (Grid Only or Compact Badge in List) */}
             {isUsedSection && !isListView && (
               <div className="absolute top-0 right-0 bg-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl rounded-tr-lg z-10">

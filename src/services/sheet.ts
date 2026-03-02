@@ -68,16 +68,14 @@ export const fetchProductsFromSheet = async (sheetId: string, gid: string = '0',
       const cols = parseCSVLine(line);
       const getValue = (idx: number) => (idx >= 0 && idx < cols.length) ? cols[idx].replace(/^"|"$/g, '') : '';
 
-      // Availability Check - DISABLED to show all products
-      /*
+      let hasStock = true;
       if (isUsed && idxStatus > -1) {
         const statusVal = getValue(idxStatus).toLowerCase();
-        if (!statusVal.includes('disponible')) continue; 
+        if (!statusVal.includes('disponible')) hasStock = false; 
       } else if (!isUsed && idxStock > -1) {
          const stockVal = getValue(idxStock).toLowerCase();
-         if (stockVal === 'no' || stockVal === 'false' || stockVal === '0') continue;
+         if (stockVal === 'no' || stockVal === 'false' || stockVal === '0') hasStock = false;
       }
-      */
 
       const rawName = getValue(idxModel);
       if (!rawName) continue;
@@ -125,7 +123,7 @@ export const fetchProductsFromSheet = async (sheetId: string, gid: string = '0',
           price,
           category: 'Usados',
           description,
-          stock: true,
+          stock: hasStock,
           image, 
           batteryHealth: battery ? (battery.includes('%') ? battery : `${battery}%`) : undefined,
           warranty: '1 Mes', 
@@ -147,7 +145,7 @@ export const fetchProductsFromSheet = async (sheetId: string, gid: string = '0',
           price,
           category,
           description,
-          stock: true,
+          stock: hasStock,
           image,
           colors: [] // Could parse colors if needed
         });
