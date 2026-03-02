@@ -13,6 +13,8 @@ const __dirname = path.dirname(__filename);
 // Import initial products
 import { PRODUCTS } from './constants';
 
+import { supabase } from './src/lib/supabase';
+
 const app = express();
 const PORT = 3000;
 const DATA_FILE = path.resolve(__dirname, 'products.json');
@@ -20,6 +22,11 @@ const SALES_FILE = path.resolve(__dirname, 'sales.json');
 const USERS_FILE = path.resolve(__dirname, 'users.json');
 
 console.log('Server: Data paths:', { DATA_FILE, SALES_FILE, USERS_FILE });
+
+// Helper to check if Supabase is configured
+const isSupabaseConfigured = () => {
+  return !!process.env.SUPABASE_URL && (!!process.env.SUPABASE_SERVICE_ROLE_KEY || !!process.env.SUPABASE_ANON_KEY);
+};
 
 app.use(cors());
 app.use(express.json());
@@ -49,8 +56,22 @@ if (!fs.existsSync(USERS_FILE)) {
 // API Routes
 
 // GET Products
-app.get('/api/products', (req, res) => {
+app.get('/api/products', async (req, res) => {
   console.log('GET /api/products called');
+  
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase.from('products').select('*').order('name');
+      if (!error && data && data.length > 0) {
+        console.log(`Server: Fetched ${data.length} products from Supabase`);
+        return res.json(data);
+      }
+      if (error) console.error('Server: Supabase error fetching products:', error);
+    } catch (err) {
+      console.error('Server: Exception fetching from Supabase:', err);
+    }
+  }
+
   try {
     if (fs.existsSync(DATA_FILE)) {
       const data = fs.readFileSync(DATA_FILE, 'utf-8');
@@ -72,11 +93,20 @@ app.get('/api/products', (req, res) => {
 });
 
 // PUT Product (Update single product)
-app.put('/api/products/:id', (req, res) => {
+app.put('/api/products/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const updatedProduct = req.body;
     
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase.from('products').upsert({ ...updatedProduct, id });
+      if (error) {
+        console.error('Server: Supabase error updating product:', error);
+      } else {
+        return res.json({ success: true });
+      }
+    }
+
     let products = [];
     if (fs.existsSync(DATA_FILE)) {
       products = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
@@ -99,7 +129,17 @@ app.put('/api/products/:id', (req, res) => {
 });
 
 // GET Sales
-app.get('/api/sales', (req, res) => {
+app.get('/api/sales', async (req, res) => {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase.from('sales').select('*').order('date', { ascending: false });
+      if (!error && data) return res.json(data);
+      if (error) console.error('Server: Supabase error fetching sales:', error);
+    } catch (err) {
+      console.error('Server: Exception fetching sales from Supabase:', err);
+    }
+  }
+
   try {
     if (fs.existsSync(SALES_FILE)) {
       const data = fs.readFileSync(SALES_FILE, 'utf-8');
@@ -113,9 +153,19 @@ app.get('/api/sales', (req, res) => {
 });
 
 // POST Sale
-app.post('/api/sales', (req, res) => {
+app.post('/api/sales', async (req, res) => {
   try {
     const newSale = req.body;
+    
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase.from('sales').insert({ ...newSale, id: Math.random().toString() });
+      if (error) {
+        console.error('Server: Supabase error saving sale:', error);
+      } else {
+        return res.json({ success: true });
+      }
+    }
+
     let sales = [];
     if (fs.existsSync(SALES_FILE)) {
       sales = JSON.parse(fs.readFileSync(SALES_FILE, 'utf-8'));
