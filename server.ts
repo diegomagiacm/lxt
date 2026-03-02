@@ -226,6 +226,143 @@ app.post('/api/sales', async (req, res) => {
   }
 });
 
+// ==========================================
+// USER MANAGEMENT ENDPOINTS
+// ==========================================
+
+// POST Login
+app.post('/api/auth/login', async (req, res) => {
+  const { username, code } = req.body;
+  try {
+    if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .eq('code', code)
+        .single();
+
+      if (error || !data) {
+        return res.status(401).json({ error: 'Credenciales inválidas' });
+      }
+
+      return res.json({
+        user: {
+          username: data.username,
+          code: data.code,
+          role: data.role,
+          salesCount: data.sales_count || 0,
+          extraHours: data.extra_hours || 0,
+          id: data.id
+        }
+      });
+    }
+    
+    // Fallback to mock if no Supabase (should not happen in prod if configured)
+    return res.status(500).json({ error: 'Database not configured' });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// GET Users
+app.get('/api/users', async (req, res) => {
+  try {
+    if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin.from('users').select('*');
+      if (!error && data) {
+        return res.json(data.map((d: any) => ({
+          id: d.id,
+          username: d.username,
+          code: d.code,
+          role: d.role,
+          salesCount: d.sales_count || 0,
+          extraHours: d.extra_hours || 0
+        })));
+      }
+    }
+    res.json([]);
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// POST Create User
+app.post('/api/users', async (req, res) => {
+  const newUser = req.body;
+  try {
+    if (supabaseAdmin) {
+      const { error } = await supabaseAdmin.from('users').insert([{
+        username: newUser.username,
+        code: newUser.code,
+        role: newUser.role,
+        sales_count: 0,
+        extra_hours: 0
+      }]);
+      
+      if (error) {
+        return res.status(400).json({ error: error.message });
+      }
+      return res.json({ success: true });
+    }
+    res.status(500).json({ error: 'Database not configured' });
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// PUT Update User Stats
+app.put('/api/users/:username/stats', async (req, res) => {
+  const { username } = req.params;
+  const { extraHours } = req.body;
+  
+  try {
+    if (supabaseAdmin) {
+      // First get current
+      const { data: current } = await supabaseAdmin.from('users').select('extra_hours').eq('username', username).single();
+      
+      if (!current) return res.status(404).json({ error: 'User not found' });
+      
+      const { error } = await supabaseAdmin
+        .from('users')
+        .update({ extra_hours: (current.extra_hours || 0) + extraHours })
+        .eq('username', username);
+
+      if (error) return res.status(400).json({ error: error.message });
+      return res.json({ success: true });
+    }
+    res.status(500).json({ error: 'Database not configured' });
+  } catch (error) {
+    console.error('Update stats error:', error);
+    res.status(500).json({ error: 'Failed to update stats' });
+  }
+});
+
+// PUT Change Password
+app.put('/api/users/:username/password', async (req, res) => {
+  const { username } = req.params;
+  const { newCode } = req.body;
+  
+  try {
+    if (supabaseAdmin) {
+      const { error } = await supabaseAdmin
+        .from('users')
+        .update({ code: newCode })
+        .eq('username', username);
+
+      if (error) return res.status(400).json({ error: error.message });
+      return res.json({ success: true });
+    }
+    res.status(500).json({ error: 'Database not configured' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
 // Vite middleware for development
 if (process.env.NODE_ENV !== 'production') {
   const vite = await createViteServer({

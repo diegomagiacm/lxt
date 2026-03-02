@@ -1,22 +1,25 @@
 # Guía de Configuración de Supabase
 
-Para conectar tu aplicación a una base de datos real en Supabase y persistir usuarios y productos, sigue estos pasos:
+Para conectar tu aplicación a una base de datos real en Supabase y persistir usuarios y productos, sigue estos pasos.
 
 ## 1. Crear Proyecto en Supabase
 1. Ve a [supabase.com](https://supabase.com) y crea una cuenta.
 2. Crea un nuevo proyecto.
 3. Una vez creado, ve a **Settings** > **API**.
-4. Copia la **Project URL** y la **anon public key**.
+4. Copia la **Project URL**, la **anon public key** y la **service_role secret**.
 
 ## 2. Configurar Variables de Entorno
-En AI Studio, debes configurar las siguientes variables de entorno (o en tu archivo `.env` local si descargas el código):
+En tu plataforma de despliegue (Vercel, Netlify, etc.) o en tu archivo `.env` local, configura las siguientes variables:
 
 ```env
 VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
 VITE_SUPABASE_ANON_KEY=tu-clave-anonima
+SUPABASE_SERVICE_ROLE_KEY=tu-clave-service-role
 ```
 
-> **Nota:** En este entorno de demostración, la aplicación detecta automáticamente si estas variables faltan y usa una base de datos local (localStorage) para que puedas probar todo sin configurar nada.
+> **IMPORTANTE:** 
+> - `VITE_SUPABASE_ANON_KEY` debe ser la clave **anon/public**. Es segura para usar en el navegador.
+> - `SUPABASE_SERVICE_ROLE_KEY` debe ser la clave **service_role**. **NUNCA** la pongas en una variable que empiece con `VITE_` ni la uses en el código del cliente/navegador. Esta clave tiene acceso total a tu base de datos.
 
 ## 3. Crear las Tablas (SQL)
 Ve al **SQL Editor** en tu dashboard de Supabase y ejecuta el siguiente script para crear las tablas necesarias:
@@ -59,25 +62,24 @@ create table sales (
   created_at timestamp with time zone default now()
 );
 
--- 4. Insertar Usuarios Iniciales
-insert into users (username, code, role) values
-('aracelit', 'A955118', 'admin'),
-('diegou', 'D1455', 'admin'),
-('joacor', '955118', 'admin'),
-('gastonv', '955602', 'admin'),
-('ignaciop', '605955', 'admin');
-
--- 5. Configurar Políticas de Seguridad (RLS) - Opcional pero recomendado
--- Permitir lectura/escritura pública para este demo (en prod usar auth real)
+-- 4. Configurar Políticas de Seguridad (RLS)
 alter table users enable row level security;
-create policy "Public Access" on users for all using (true);
+create policy "Service role has full access users" on users for all using (true);
+create policy "Public read access users" on users for select using (true);
 
 alter table products enable row level security;
-create policy "Public Access" on products for all using (true);
+create policy "Public read access products" on products for select using (true);
+create policy "Service role has full access products" on products for all using (true);
 
 alter table sales enable row level security;
-create policy "Public Access" on sales for all using (true);
+create policy "Service role has full access sales" on sales for all using (true);
+create policy "Users can see their own sales" on sales for select using (user_id = auth.uid()::text); -- Ajustar según auth real si se usa
 ```
 
-## 4. Verificar Conexión
-Una vez configuradas las variables de entorno y ejecutado el SQL, recarga la página. La aplicación detectará las credenciales y comenzará a leer/escribir en Supabase en lugar de localStorage.
+## 4. Insertar Datos Iniciales (Seed)
+Para poblar la base de datos con los usuarios y productos iniciales, copia el contenido del archivo `seed_data.sql` y ejecútalo en el **SQL Editor** de Supabase.
+
+El archivo `seed_data.sql` contiene todos los `INSERT` necesarios.
+
+## 5. Verificar
+Una vez configurado todo, recarga tu aplicación. Ahora usará Supabase para autenticación y datos.
