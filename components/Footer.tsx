@@ -29,6 +29,11 @@ const Footer: React.FC = () => {
                 </svg>
               </a>
             </div>
+            <div className="pt-4">
+              <a href="/dpanel" className="text-xs text-gray-600 hover:text-gray-400 transition-colors">
+                Acceso Staff
+              </a>
+            </div>
           </div>
 
           {/* Location 1: Centro */}

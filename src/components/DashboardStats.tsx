@@ -1,5 +1,5 @@
 import React from 'react';
-import { User } from '../types';
+import { User } from '../../types';
 import { calculateDailyCommissions } from '../services/db';
 import { ShoppingCart, TrendingUp, DollarSign, Users } from 'lucide-react';
 
