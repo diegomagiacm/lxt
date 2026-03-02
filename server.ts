@@ -284,6 +284,51 @@ app.put('/api/users/:username/password', (req, res) => {
   }
 });
 
+// POST Seed Products
+app.post('/api/products/seed', async (req, res) => {
+  try {
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase.from('products').upsert(PRODUCTS);
+      if (error) throw error;
+    }
+    fs.writeFileSync(DATA_FILE, JSON.stringify(PRODUCTS, null, 2));
+    res.json({ success: true, count: PRODUCTS.length });
+  } catch (error) {
+    console.error('Seed error:', error);
+    res.status(500).json({ error: 'Failed to seed products' });
+  }
+});
+
+// POST Seed Users
+app.post('/api/users/seed', (req, res) => {
+  try {
+    const defaultUsers = [
+      {
+        id: '1',
+        username: 'admin',
+        code: '1234',
+        role: 'admin',
+        sales_count: 0,
+        extra_hours: 0,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: '2',
+        username: 'diegou',
+        code: '1234',
+        role: 'admin',
+        sales_count: 0,
+        extra_hours: 0,
+        created_at: new Date().toISOString()
+      }
+    ];
+    fs.writeFileSync(USERS_FILE, JSON.stringify(defaultUsers, null, 2));
+    res.json({ success: true, count: defaultUsers.length });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to seed users' });
+  }
+});
+
 // Vite middleware for development
 if (process.env.NODE_ENV !== 'production') {
   const vite = await createViteServer({

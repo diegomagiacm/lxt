@@ -11,15 +11,13 @@ import { PRODUCTS, fallbackImg, USED_PRODUCTS_SHEET_ID, USED_PRODUCTS_SHEET_GID 
 import { fetchProductsFromSheet } from './src/services/sheet';
 import { getProducts } from './src/services/db';
 
-import DashboardLayout from './src/pages/dpanel';
+import DashboardLayout from './src/pages/dpanel/index';
 
 // Wrapper to conditionally render layout
 const Layout: React.FC<{ children: React.ReactNode; cartCount: number; openCart: () => void }> = ({ children, cartCount, openCart }) => {
   const location = useLocation();
   const isDashboard = location.pathname.startsWith('/dpanel');
   
-  console.log('Current Path:', location.pathname, 'isDashboard:', isDashboard);
-
   return (
     <div className="flex flex-col min-h-screen">
       {!isDashboard && <Navbar cartCount={cartCount} openCart={openCart} />}

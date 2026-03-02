@@ -1,5 +1,6 @@
 import React from 'react';
 import { Facebook, Instagram, MapPin, Clock, Video } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
   return (
@@ -30,9 +31,9 @@ const Footer: React.FC = () => {
               </a>
             </div>
             <div className="pt-4">
-              <a href="/dpanel" className="text-xs text-gray-600 hover:text-gray-400 transition-colors">
+              <Link to="/dpanel" className="text-xs text-gray-600 hover:text-gray-400 transition-colors">
                 Acceso Staff
-              </a>
+              </Link>
             </div>
           </div>
 
