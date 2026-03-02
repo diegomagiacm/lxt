@@ -520,6 +520,7 @@ const AdminDashboard: React.FC = () => {
                   description: '',
                   image: '',
                   stock: true,
+                  quantity: 0,
                   colors: []
                 });
                 setIsProductModalOpen(true);
@@ -625,12 +626,27 @@ const AdminDashboard: React.FC = () => {
                   </div>
 
                   <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                    <button 
-                      onClick={() => handleInlineChange(product.id, 'stock', !p.stock)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium ${p.stock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
-                    >
-                      {p.stock ? 'En Stock' : 'Sin Stock'}
-                    </button>
+                    {p.variants && p.variants.length > 0 ? (
+                      <span className="text-xs text-gray-500 font-medium">
+                        Total: {p.variants.reduce((acc, v) => acc + (v.stock || 0), 0)} u.
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="number" 
+                          value={p.quantity || 0}
+                          onChange={(e) => handleInlineChange(product.id, 'quantity', Number(e.target.value))}
+                          className="w-16 border-gray-200 rounded text-sm p-1"
+                          placeholder="Qty"
+                        />
+                        <button 
+                          onClick={() => handleInlineChange(product.id, 'stock', !p.stock)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium ${p.stock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+                        >
+                          {p.stock ? 'En Stock' : 'Sin Stock'}
+                        </button>
+                      </div>
+                    )}
                     
                     {isEdited && (
                       <button 
@@ -755,12 +771,26 @@ const AdminDashboard: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <button 
-                          onClick={() => handleInlineChange(product.id, 'stock', !p.stock)}
-                          className={`px-2 py-1 rounded-full text-xs font-medium w-full ${p.stock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
-                        >
-                          {p.stock ? 'Si' : 'No'}
-                        </button>
+                        {p.variants && p.variants.length > 0 ? (
+                          <span className="text-xs text-gray-500">
+                            {p.variants.reduce((acc, v) => acc + (v.stock || 0), 0)} u.
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <input 
+                              type="number" 
+                              value={p.quantity || 0}
+                              onChange={(e) => handleInlineChange(product.id, 'quantity', Number(e.target.value))}
+                              className="w-16 border-gray-200 rounded text-sm focus:ring-blue-500 focus:border-blue-500"
+                            />
+                            <button 
+                              onClick={() => handleInlineChange(product.id, 'stock', !p.stock)}
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${p.stock ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+                            >
+                              {p.stock ? 'Si' : 'No'}
+                            </button>
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center">
@@ -930,14 +960,25 @@ const AdminDashboard: React.FC = () => {
                   rows={3}
                 />
               </div>
-              <div className="flex items-center">
-                <input 
-                  type="checkbox" 
-                  checked={editingProduct.stock}
-                  onChange={e => setEditingProduct({...editingProduct, stock: e.target.checked})}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label className="ml-2 block text-sm text-gray-900">En Stock</label>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center">
+                  <input 
+                    type="checkbox" 
+                    checked={editingProduct.stock}
+                    onChange={e => setEditingProduct({...editingProduct, stock: e.target.checked})}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label className="ml-2 block text-sm text-gray-900">En Stock</label>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Cantidad (si no hay variantes)</label>
+                  <input 
+                    type="number" 
+                    value={editingProduct.quantity || 0}
+                    onChange={e => setEditingProduct({...editingProduct, quantity: Number(e.target.value)})}
+                    className="mt-1 block w-24 border border-gray-300 rounded-md shadow-sm p-2"
+                  />
+                </div>
               </div>
               <div className="flex justify-end space-x-3 mt-6">
                 <button 

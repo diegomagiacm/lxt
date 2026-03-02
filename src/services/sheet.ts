@@ -68,7 +68,8 @@ export const fetchProductsFromSheet = async (sheetId: string, gid: string = '0',
       const cols = parseCSVLine(line);
       const getValue = (idx: number) => (idx >= 0 && idx < cols.length) ? cols[idx].replace(/^"|"$/g, '') : '';
 
-      // Availability Check
+      // Availability Check - DISABLED to show all products
+      /*
       if (isUsed && idxStatus > -1) {
         const statusVal = getValue(idxStatus).toLowerCase();
         if (!statusVal.includes('disponible')) continue; 
@@ -76,6 +77,7 @@ export const fetchProductsFromSheet = async (sheetId: string, gid: string = '0',
          const stockVal = getValue(idxStock).toLowerCase();
          if (stockVal === 'no' || stockVal === 'false' || stockVal === '0') continue;
       }
+      */
 
       const rawName = getValue(idxModel);
       if (!rawName) continue;

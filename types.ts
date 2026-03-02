@@ -12,6 +12,7 @@ export interface Product {
   description: string;
   image: string;
   stock: boolean; // General availability
+  quantity?: number; // Numeric stock for simple products
   colors?: string[]; // Deprecated, kept for backward compatibility
   variants?: ProductVariant[]; // New field for color-specific stock
   location?: string; // Warehouse location (Z, R1, etc.)

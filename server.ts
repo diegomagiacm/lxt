@@ -67,6 +67,7 @@ app.get('/api/products', async (req, res) => {
           description: p.description,
           image: p.image_url,
           stock: p.stock,
+          quantity: p.quantity || 0,
           colors: p.colors,
           variants: p.variants || [],
           location: p.location
@@ -116,6 +117,7 @@ app.put('/api/products/:id', async (req, res) => {
         description: updatedProduct.description,
         image_url: updatedProduct.image,
         stock: updatedProduct.stock,
+        quantity: updatedProduct.quantity,
         colors: updatedProduct.colors,
         variants: updatedProduct.variants,
         location: updatedProduct.location

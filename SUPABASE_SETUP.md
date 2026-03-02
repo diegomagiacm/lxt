@@ -48,6 +48,7 @@ create table products (
   description text,
   image_url text,
   stock boolean default true,
+  quantity int default 0, -- Stock numérico para productos simples
   colors text[],
   variants jsonb, -- Stores array of {color: string, stock: number}
   location text
