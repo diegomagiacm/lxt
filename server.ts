@@ -23,11 +23,18 @@ const USERS_FILE = path.join(__dirname, 'users.json');
 // Initialize Supabase Admin Client (Server-side)
 // We try to use the Service Role Key first, but fallback to other keys if available.
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+const supabaseKey = serviceRoleKey || anonKey;
 
 let supabaseAdmin: any = null;
 if (supabaseUrl && supabaseKey) {
   try {
+    console.log('Initializing Supabase Admin with URL:', supabaseUrl);
+    console.log('Using Service Role Key:', !!serviceRoleKey);
+    console.log('Using Anon Key:', !!anonKey);
+    
     supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
       auth: {
         autoRefreshToken: false,
@@ -251,7 +258,12 @@ app.post('/api/sales', async (req, res) => {
 
 // POST Login
 app.post('/api/auth/login', async (req, res) => {
-  const { username, code } = req.body;
+  let { username, code } = req.body;
+  
+  // Trim whitespace
+  username = username?.trim();
+  code = code?.trim();
+
   try {
     if (supabaseAdmin) {
       const { data, error } = await supabaseAdmin

@@ -12,6 +12,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const INITIAL_USERS = [
+  { username: 'admin', code: '1234', role: 'admin', sales_count: 0, extra_hours: 0 },
   { username: 'aracelit', code: 'A955118', role: 'admin', sales_count: 0, extra_hours: 0 },
   { username: 'diegou', code: 'D1455', role: 'admin', sales_count: 0, extra_hours: 0 },
   { username: 'joacor', code: '955118', role: 'admin', sales_count: 0, extra_hours: 0 },
