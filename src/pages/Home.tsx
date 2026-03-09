@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Grid, List } from 'lucide-react';
 import { cn, formatPrice } from '../lib/utils';
+import { supabase } from '../lib/supabase';
 
 const banners = [
   "Envíos al todo el país",
@@ -11,7 +12,7 @@ const banners = [
   "Reservalo Ahora!"
 ];
 
-const mockProducts = [
+const fallbackProducts = [
   { id: '1', name: 'iPhone 15 Pro Max', price: 1200, category: 'iphone', image: 'https://picsum.photos/seed/iphone15/400/400', color: 'bg-blue-100' },
   { id: '2', name: 'Samsung Galaxy S24 Ultra', price: 1100, category: 'samsung', image: 'https://picsum.photos/seed/s24/400/400', color: 'bg-purple-100' },
   { id: '3', name: 'PlayStation 5', price: 500, category: 'gaming', image: 'https://picsum.photos/seed/ps5/400/400', color: 'bg-indigo-100' },
@@ -23,6 +24,35 @@ export function Home() {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .limit(20);
+      
+      if (error || !data || data.length === 0) {
+        console.warn('No products found in Supabase or error occurred. Using fallback data.', error);
+        setProducts(fallbackProducts);
+      } else {
+        // Add a random background color to each product for the hero section
+        const colors = ['bg-blue-100', 'bg-purple-100', 'bg-indigo-100', 'bg-orange-100', 'bg-green-100', 'bg-red-100', 'bg-yellow-100'];
+        const productsWithColors = data.map((p, index) => ({
+          ...p,
+          color: colors[index % colors.length],
+          image: p.image_url || `https://picsum.photos/seed/${p.id}/400/400` // Fallback image if none provided
+        }));
+        setProducts(productsWithColors);
+      }
+      setLoading(false);
+    };
+
+    fetchProducts();
+  }, []);
 
   useEffect(() => {
     const bannerInterval = setInterval(() => {
@@ -32,13 +62,18 @@ export function Home() {
   }, []);
 
   useEffect(() => {
+    if (products.length === 0) return;
     const heroInterval = setInterval(() => {
-      setCurrentHeroIndex((prev) => (prev + 1) % mockProducts.length);
+      setCurrentHeroIndex((prev) => (prev + 1) % Math.min(5, products.length)); // Show up to 5 random products in hero
     }, 5000);
     return () => clearInterval(heroInterval);
-  }, []);
+  }, [products]);
 
-  const currentHeroProduct = mockProducts[currentHeroIndex];
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Cargando catálogo...</div>;
+  }
+
+  const currentHeroProduct = products[currentHeroIndex] || fallbackProducts[0];
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -138,7 +173,7 @@ export function Home() {
           "grid gap-8",
           viewMode === 'grid' ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-1"
         )}>
-          {mockProducts.map((product, index) => (
+          {products.map((product, index) => (
             <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 20 }}

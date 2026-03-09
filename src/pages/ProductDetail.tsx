@@ -4,25 +4,46 @@ import { motion } from 'motion/react';
 import { ShoppingCart, MessageCircle, AlertTriangle } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { formatPrice, formatARS } from '../lib/utils';
+import { supabase } from '../lib/supabase';
 
 export function ProductDetail() {
   const { id } = useParams();
   const { dolarBlue, addToCart, user } = useStore();
   const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock fetching product
   useEffect(() => {
-    // In a real app, fetch from Supabase
-    setProduct({
-      id: id || '1',
-      name: 'iPhone 15 Pro Max 256GB',
-      price: 1200,
-      image: 'https://picsum.photos/seed/iphone15/800/800',
-      description: 'El iPhone más avanzado hasta la fecha. Chip A17 Pro, diseño de titanio y cámara de 48MP.',
-    });
+    const fetchProduct = async () => {
+      setLoading(true);
+      if (!id) return;
+      
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !data) {
+        console.warn('Product not found in Supabase, using mock data.', error);
+        // Mock fallback
+        setProduct({
+          id: id,
+          name: 'iPhone 15 Pro Max 256GB',
+          price: 1200,
+          image_url: 'https://picsum.photos/seed/iphone15/800/800',
+          description: 'El iPhone más avanzado hasta la fecha. Chip A17 Pro, diseño de titanio y cámara de 48MP.',
+        });
+      } else {
+        setProduct(data);
+      }
+      setLoading(false);
+    };
+
+    fetchProduct();
   }, [id]);
 
-  if (!product) return <div className="p-20 text-center">Cargando...</div>;
+  if (loading) return <div className="p-20 text-center">Cargando...</div>;
+  if (!product) return <div className="p-20 text-center">Producto no encontrado.</div>;
 
   const arsRate = dolarBlue + 10;
   const priceArs = product.price * arsRate;
@@ -53,7 +74,7 @@ export function ProductDetail() {
           className="md:w-1/2"
         >
           <div className="bg-gray-100 rounded-3xl overflow-hidden shadow-sm">
-            <img src={product.image} alt={product.name} className="w-full h-auto object-cover" />
+            <img src={product.image_url || `https://picsum.photos/seed/${product.id}/800/800`} alt={product.name} className="w-full h-auto object-cover" />
           </div>
         </motion.div>
 
@@ -65,12 +86,12 @@ export function ProductDetail() {
         >
           <h1 className="text-4xl font-bold text-gray-900 mb-4">{product.name}</h1>
           <p className="text-3xl font-bold text-blue-600 mb-6">{formatPrice(product.price)}</p>
-          <p className="text-gray-600 mb-8 text-lg">{product.description}</p>
+          <p className="text-gray-600 mb-8 text-lg">{product.description || 'Sin descripción disponible.'}</p>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-12">
             {user ? (
               <button
-                onClick={() => addToCart({ ...product, quantity: 1 })}
+                onClick={() => addToCart({ ...product, image: product.image_url || `https://picsum.photos/seed/${product.id}/800/800`, quantity: 1 })}
                 className="flex-1 bg-gray-900 text-white px-8 py-4 rounded-full font-medium hover:bg-gray-800 transition-colors flex items-center justify-center"
               >
                 <ShoppingCart className="w-5 h-5 mr-2" />

@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 import { formatPrice } from '../lib/utils';
+import { supabase } from '../lib/supabase';
 
 interface CategoryPageProps {
   title: string;
@@ -15,6 +17,35 @@ interface CategoryPageProps {
 }
 
 export function CategoryPage({ title, heroProduct, category }: CategoryPageProps) {
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('category', category); // Assuming 'category' column exists
+      
+      if (error || !data || data.length === 0) {
+        console.warn(`No products found for category ${category}. Using fallback data.`, error);
+        // Fallback data if DB is empty
+        setProducts([
+          { id: `${category}-1`, name: `${title} Model 1`, price: 800, image_url: `https://picsum.photos/seed/${category}1/400/400` },
+          { id: `${category}-2`, name: `${title} Model 2`, price: 900, image_url: `https://picsum.photos/seed/${category}2/400/400` },
+          { id: `${category}-3`, name: `${title} Model 3`, price: 1000, image_url: `https://picsum.photos/seed/${category}3/400/400` },
+          { id: `${category}-4`, name: `${title} Model 4`, price: 1100, image_url: `https://picsum.photos/seed/${category}4/400/400` },
+        ]);
+      } else {
+        setProducts(data);
+      }
+      setLoading(false);
+    };
+
+    fetchProducts();
+  }, [category, title]);
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -73,30 +104,34 @@ export function CategoryPage({ title, heroProduct, category }: CategoryPageProps
       {/* Products Grid */}
       <section className="py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <h2 className="text-3xl font-bold text-gray-900 mb-8">Todos los modelos de {title}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {/* Placeholder for actual products from DB */}
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group">
-              <div className="relative overflow-hidden bg-gray-100 w-full aspect-square">
-                <img
-                  src={`https://picsum.photos/seed/${category}${i}/400/400`}
-                  alt={`Producto ${i}`}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
+        
+        {loading ? (
+          <div className="text-center py-12">Cargando productos...</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {products.map((product) => (
+              <div key={product.id} className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                <div className="relative overflow-hidden bg-gray-100 w-full aspect-square">
+                  <img
+                    src={product.image_url || `https://picsum.photos/seed/${product.id}/400/400`}
+                    alt={product.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <div className="p-6 flex flex-col flex-grow">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.name}</h3>
+                  <p className="text-xl font-bold text-gray-900 mb-4">{formatPrice(product.price)}</p>
+                  <Link
+                    to={`/product/${product.id}`}
+                    className="mt-auto inline-flex items-center justify-center w-full px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                  >
+                    Ver Detalles
+                  </Link>
+                </div>
               </div>
-              <div className="p-6 flex flex-col flex-grow">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Modelo {i}</h3>
-                <p className="text-xl font-bold text-gray-900 mb-4">{formatPrice(800 + i * 100)}</p>
-                <Link
-                  to={`/product/${category}-${i}`}
-                  className="mt-auto inline-flex items-center justify-center w-full px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                >
-                  Ver Detalles
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
